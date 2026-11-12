@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+dist
+**/dist
+server/.pgdata
+coverage
+*.log
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+README.md
+ANALISIS_SISTEM_KETOKO_POS.md

@@ -1,0 +1,6 @@
+{
+  "name": "Ketoko POS - Point of Sale & Kasir Cloud Replika",
+  "description": "Replika sistem Point of Sale (POS) Ketoko.co.id lengkap dengan autentikasi multi-tenant, terminal kasir sentuh/barcode, multi-pembayaran, shift kasir, cetak struk thermal, dan dokumentasi arsitektur sistem.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

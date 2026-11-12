@@ -1,0 +1,230 @@
+P0001	Es Teler Pattiro DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0002	Es Teler Durian Pattiro DI	Dine In	Pattiro	PCS	25.000,00	30.000,00
+P0003	Alpukat Kodjoek DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0004	Djoes Alpukat DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0005	Djoes Mangga DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0006	Djoes Buah Naga DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0007	Djoes Sirsak DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0008	Djoes Terong Belanda DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0009	Djoes Jambu DI	Dine In	Pattiro	PCS	20.000,00	24.000,00
+P0010	Kentang Goreng DI	Snack	Pattiro	PCS	12.000,00	14.400,00
+P0011	Roti Coklat DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0012	Roti Keju DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0013	Roti Selai Kaya DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0014	Roti Coklat Keju DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0015	Roti Blueberry DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0016	Roti Vanilla DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0017	Roti Tiramisu DI	Snack	Pattiro	PCS	15.000,00	18.000,00
+P0018	Es Pisang Ijo DI	Snack	Pattiro	PCS	20.000,00	24.000,00
+P0019	Nasi Goreng Merah DI	Food	Pattiro	PCS	23.000,00	27.600,00
+P0020	Nasi Goreng Jakarta DI	Food	Pattiro	PCS	23.000,00	27.600,00
+P0021	Mie Goreng Jawa DI	Food	Pattiro	PCS	22.000,00	26.400,00
+P0022	Bubur Ayam DI	Food	Pattiro	PCS	22.000,00	26.400,00
+P0023	Bakmi Ayam DI	Food	Pattiro	PCS	22.000,00	26.400,00
+P0024	Pisang Goreng DI	Food	Pattiro	PCS	15.000,00	18.000,00
+P0025	Ubi Goreng DI	Food	Pattiro	PCS	15.000,00	18.000,00
+P0026	Bakso Goreng DI	Food	Pattiro	PCS	18.000,00	21.600,00
+P0027	Tahu Goreng DI	Food	Pattiro	PCS	18.000,00	21.600,00
+P0028	Cireng DI	Food	Pattiro	PCS	18.000,00	21.600,00
+P0029	Es Teler Pattiro TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0030	Es Teler Durian Pattiro TA	Take Away	Pattiro	PCS	27.000,00	32.400,00
+P0031	Alpukat Kodjoek TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0032	Djoes Alpukat TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0033	Djoes Mangga TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0034	Djoes Buah Naga TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0035	Djoes Sirsak TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0036	Djoes Terong Belanda TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0037	Djoes Jambu TA	Take Away	Pattiro	PCS	22.000,00	26.400,00
+P0038	Es Teler Pattiro (Regular) TA	Take Away	Pattiro	PCS	18.000,00	21.600,00
+P0039	Kentang Goreng TA	Snack	Pattiro	PCS	12.000,00	14.400,00
+P0040	Roti Coklat TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0041	Roti Keju TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0042	Roti Selai Kaya TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0043	Roti Coklat Keju TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0044	Roti Blueberry TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0045	Roti Vanilla TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0046	Roti Tiramisu TA	Snack	Pattiro	PCS	17.000,00	20.400,00
+P0047	Es Pisang Ijo TA	Snack	Pattiro	PCS	22.000,00	26.400,00
+P0048	Djoes Alpukat	Djoes Reg	Pattiro	PCS	16.000,00	19.200,00
+P0049	Djoes Mangga	Djoes Reg	Pattiro	PCS	16.000,00	19.200,00
+P0050	Djoes Buah Naga	Djoes Reg	Pattiro	PCS	16.000,00	19.200,00
+P0051	Djoes Sirsak	Djoes Reg	Pattiro	PCS	16.000,00	19.200,00
+P0052	Djoes Terong Belanda	Djoes Reg	Pattiro	PCS	16.000,00	19.200,00
+P0053	Djoes Jambu	Djoes Reg	Pattiro	PCS	16.000,00	19.200,00
+P0054	Kopi O DI	Drink	Pattiro	PCS	12.000,00	14.400,00
+P0055	Kopi Susu DI	Drink	Pattiro	PCS	15.000,00	18.000,00
+P0056	Kopi Butter DI	Drink	Pattiro	PCS	18.000,00	21.600,00
+P0057	Es Kopi Susu DI	Drink	Pattiro	PCS	18.000,00	21.600,00
+P0058	Teh Manis DI	Drink	Pattiro	PCS	8.000,00	9.600,00
+P0059	Teh Susu DI	Drink	Pattiro	PCS	12.000,00	14.400,00
+P0060	Teh Tarik DI	Drink	Pattiro	PCS	15.000,00	18.000,00
+P0061	Es Teh Lemon DI	Drink	Pattiro	PCS	15.000,00	18.000,00
+P0062	Es Teh Tarik DI	Drink	Pattiro	PCS	18.000,00	21.600,00
+P0063	Cokelat Panas DI	Drink	Pattiro	PCS	15.000,00	18.000,00
+P0064	Es Cokelat DI	Drink	Pattiro	PCS	18.000,00	21.600,00
+P0065	Es Teh Manis DI	Drink	Pattiro	PCS	10.000,00	12.000,00
+P0066	Top Alpukat	Topping	Pattiro	PCS	3.000,00	3.600,00
+P0067	Top Nangka	Topping	Pattiro	PCS	3.000,00	3.600,00
+P0068	Top Jus Alpukat	Topping	Pattiro	PCS	3.000,00	3.600,00
+P0069	Top Aren	Topping	Pattiro	PCS	7.000,00	8.400,00
+P0070	Top Kacang Disko	Topping	Pattiro	PCS	3.000,00	3.600,00
+P0071	Top Durian	Topping	Pattiro	PCS	7.000,00	8.400,00
+P0072	Nasi Goreng Merah TA	Take Away	Pattiro	PCS	24.000,00	28.800,00
+P0073	Nasi Goreng Jakarta TA	Take Away	Pattiro	PCS	24.000,00	28.800,00
+P0074	Mie Goreng Jawa TA	Take Away	Pattiro	PCS	23.000,00	27.600,00
+P0075	Bubur Ayam DI	Take Away	Pattiro	PCS	23.000,00	27.600,00
+P0076	Bakmi Ayam TA	Take Away	Pattiro	PCS	23.000,00	27.600,00
+P0077	Pisang Goreng TA	Take Away	Pattiro	PCS	16.000,00	19.200,00
+P0078	Ubi Goreng TA	Take Away	Pattiro	PCS	16.000,00	19.200,00
+P0079	Bakso Goreng TA	Take Away	Pattiro	PCS	19.000,00	22.800,00
+P0080	Tahu Goreng TA	Take Away	Pattiro	PCS	19.000,00	22.800,00
+P0081	Cireng TA	Take Away	Pattiro	PCS	19.000,00	22.800,00
+P0082	Kopi O TA	Take Away	Pattiro	PCS	14.000,00	16.800,00
+P0083	Kopi Susu TA	Take Away	Pattiro	PCS	17.000,00	20.400,00
+P0084	Kopi Butter TA	Take Away	Pattiro	PCS	20.000,00	24.000,00
+P0085	Es Kopi Susu TA	Take Away	Pattiro	PCS	20.000,00	24.000,00
+P0086	Teh Manis TA	Take Away	Pattiro	PCS	10.000,00	12.000,00
+P0087	Teh Susu TA	Take Away	Pattiro	PCS	14.000,00	16.800,00
+P0088	Teh Tarik TA	Take Away	Pattiro	PCS	17.000,00	20.400,00
+P0089	Es Teh Lemon TA	Take Away	Pattiro	PCS	17.000,00	20.400,00
+P0090	Es Teh Tarik TA	Take Away	Pattiro	PCS	20.000,00	24.000,00
+P0091	Cokelat Panas TA	Take Away	Pattiro	PCS	17.000,00	20.400,00
+P0092	Es Cokelat TA	Take Away	Pattiro	PCS	20.000,00	24.000,00
+P0093	Es Teh Manis TA	Take Away	Pattiro	PCS	12.000,00	14.400,00
+P0094	Bubur Kacang Ijo	DI/TA	Pattiro	PCS	12.000,00	14.400,00
+P0095	Bubur Ketan Hitam	DI/TA	Pattiro	PCS	12.000,00	14.400,00
+P0096	Bubur Ayam	DI/TA	Pattiro	PCS	20.000,00	24.000,00
+P0097	Bassang	DI/TA	Pattiro	PCS	10.000,00	12.000,00
+P0098	Bubur Campur	DI/TA	Pattiro	PCS	12.000,00	14.400,00
+P0099	Donat Klasik Meses	DI/TA	Pattiro	PCS	6.000,00	7.200,00
+P0100	Donat Klasik Susu	DI/TA	Pattiro	PCS	6.000,00	7.200,00
+P0101	Donat Klasik Keju	DI/TA	Pattiro	PCS	6.000,00	7.200,00
+P0102	Donat Klasik Gula	DI/TA	Pattiro	PCS	6.000,00	7.200,00
+P0103	Donat Klasik Abon	DI/TA	Pattiro	PCS	7.000,00	8.400,00
+P0116	Es Teler Pattiro Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0117	Es Teler Durian Pattiro Grab	Grab	Pattiro	PCS	44.000,00	52.800,00
+P0118	Alpukat Kodjoek Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0119	Djoes Alpukat Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0120	Djoes Mangga Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0121	Djoes Buah Naga Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0122	Djoes Sirsak Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0123	Djoes Terong Belanda Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0124	Djoes Jambu Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0125	Kentang Goreng Grab	Grab	Pattiro	PCS	19.500,00	23.400,00
+P0126	Roti Coklat Grab	Grab	Pattiro	PCS	27.500,00	33.000,00
+P0127	Roti Keju Grab	Grab	Pattiro	PCS	27.500,00	33.000,00
+P0128	Roti Selai Kaya Grab	Grab	Pattiro	PCS	27.500,00	33.000,00
+P0129	Roti Coklat Keju Grab	Grab	Pattiro	PCS	27.500,00	33.000,00
+P0130	Es Pisang Ijo Grab	Grab	Pattiro	PCS	35.500,00	42.600,00
+P0131	Donat Klasik Meses Grab	Grab	Pattiro	PCS	10.000,00	12.000,00
+P0132	Donat Klasik Susu Grab	Grab	Pattiro	PCS	10.000,00	12.000,00
+P0133	Donat Klasik Keju Grab	Grab	Pattiro	PCS	10.000,00	12.000,00
+P0134	Donat Klasik Gula Grab	Grab	Pattiro	PCS	10.000,00	12.000,00
+P0135	Donat Klasik Abon Grab	Grab	Pattiro	PCS	11.500,00	13.800,00
+P0136	Nasi Goreng Merah Grab	Grab	Pattiro	PCS	39.000,00	46.800,00
+P0137	Nasi Goreng Jakarta Grab	Grab	Pattiro	PCS	39.000,00	46.800,00
+P0138	Mie Goreng Jawa Grab	Grab	Pattiro	PCS	39.000,00	46.800,00
+P0139	Bubur Ayam Grab	Grab	Pattiro	PCS	39.000,00	46.800,00
+P0140	Bakmi Ayam Grab	Grab	Pattiro	PCS	39.000,00	46.800,00
+P0141	Es Teh Tarik Grab	Grab	Pattiro	PCS	32.500,00	39.000,00
+P0142	Es Cokelat Grab	Grab	Pattiro	PCS	32.500,00	39.000,00
+P0143	Es Kopi Susu Grab	Grab	Pattiro	PCS	32.500,00	39.000,00
+P0144	Pisang Goreng Grab	Grab	Pattiro	PCS	26.500,00	31.800,00
+P0145	Bubur Ayam Grab	Grab	Pattiro	PCS	32.500,00	39.000,00
+P0146	Bubur Ketan Grab	Grab	Pattiro	PCS	19.500,00	23.400,00
+P0147	Bubut Kacang Hijau Grab	Grab	Pattiro	PCS	19.500,00	23.400,00
+P0148	Bubur Mix Grab	Grab	Pattiro	PCS	19.500,00	23.400,00
+P0149	Bassang Grab	Grab	Pattiro	PCS	16.500,00	19.800,00
+P0150	Ubi Goreng Grab	Grab	Pattiro	PCS	26.500,00	31.800,00
+P0151	Cireng Grab	Grab	Pattiro	PCS	31.000,00	37.200,00
+P0152	Bakso Goreng Grab	Grab	Pattiro	PCS	31.000,00	37.200,00
+P0153	Tahu Bakso Grab	Grab	Pattiro	PCS	31.000,00	37.200,00
+P0154	Es Teler Pattiro Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0155	Es Teler Durian Pattiro Shopee	Shopee	Pattiro	PCS	49.950,00	59.940,00
+P0156	Alpukat Kodjoek Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0157	Djoes Alpukat Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0158	Djoes Mangga Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0159	Djoes Buah Naga Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0160	Djoes Sirsak Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0161	Djoes Terong Belanda Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0162	Djoes Jambu Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0163	Kentang Goreng Shopee	Shopee	Pattiro	PCS	22.200,00	26.640,00
+P0164	Roti Coklat Shopee	Shopee	Pattiro	PCS	31.450,00	37.740,00
+P0165	Roti Keju Shopee	Shopee	Pattiro	PCS	31.450,00	37.740,00
+P0166	Roti Selai Kaya Shopee	Shopee	Pattiro	PCS	31.450,00	37.740,00
+P0167	Roti Coklat Keju Shopee	Shopee	Pattiro	PCS	31.450,00	37.740,00
+P0168	Nasi Goreng Merah Shopee	Shopee	Pattiro	PCS	43.700,00	52.440,00
+P0169	Nasi Goreng Jakarta Shopee	Shopee	Pattiro	PCS	43.700,00	52.440,00
+P0170	Mie Goreng Jawa Shopee	Shopee	Pattiro	PCS	43.700,00	52.440,00
+P0171	Bubur Ayam Shopee	Shopee	Pattiro	PCS	43.700,00	52.440,00
+P0172	Bakmi Ayam Shopee	Shopee	Pattiro	PCS	43.700,00	52.440,00
+P0173	Es Teh Tarik Shopee	Shopee	Pattiro	PCS	36.500,00	43.800,00
+P0174	Es Cokelat Shopee	Shopee	Pattiro	PCS	36.500,00	43.800,00
+P0175	Es Kopi Susu Shopee	Shopee	Pattiro	PCS	36.500,00	43.800,00
+P0176	Pisang Goreng Shopee	Shopee	Pattiro	PCS	29.500,00	35.400,00
+P0177	Bubur Ayam Shopee	Shopee	Pattiro	PCS	36.500,00	43.800,00
+P0178	Bubur Ketan Shopee	Shopee	Pattiro	PCS	22.500,00	27.000,00
+P0179	Bubur Kacang Hijau Shopee	Shopee	Pattiro	PCS	22.500,00	27.000,00
+P0180	Bubur Mix Shopee	Shopee	Pattiro	PCS	22.500,00	27.000,00
+P0181	Bassang Shopee	Shopee	Pattiro	PCS	18.500,00	22.200,00
+P0182	Ubi Goreng Shopee	Shopee	Pattiro	PCS	29.500,00	35.400,00
+P0183	Cireng Shopee	Shopee	Pattiro	PCS	34.700,00	41.640,00
+P0184	Bakso Goreng Shopee	Shopee	Pattiro	PCS	34.700,00	41.640,00
+P0185	Tahu Bakso Shopee	Shopee	Pattiro	PCS	34.700,00	41.640,00
+P0186	Es Teler Pattiro Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0187	Es Teler Durian Pattiro Gojek	Gojek	Pattiro	PCS	44.000,00	52.800,00
+P0188	Alpukat Kodjoek Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0189	Djoes Alpukat Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0190	Djoes Mangga Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0191	Djoes Buah Naga Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0192	Djoes Sirsak Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0193	Djoes Terong Belanda Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0194	Djoes Jambu Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0195	Kentang Goreng Gojek	Gojek	Pattiro	PCS	19.500,00	23.400,00
+P0196	Roti Coklat Gojek	Gojek	Pattiro	PCS	27.500,00	33.000,00
+P0197	Roti Keju Gojek	Gojek	Pattiro	PCS	27.500,00	33.000,00
+P0198	Roti Selai Kaya Gojek	Gojek	Pattiro	PCS	27.500,00	33.000,00
+P0199	Roti Coklat Keju Gojek	Gojek	Pattiro	PCS	27.500,00	33.000,00
+P0200	Es Pisang Ijo Gojek	Gojek	Pattiro	PCS	35.500,00	42.600,00
+P0201	Donat Klasik Meses Gojek	Gojek	Pattiro	PCS	10.000,00	12.000,00
+P0202	Donat Klasik Susu Gojek	Gojek	Pattiro	PCS	10.000,00	12.000,00
+P0203	Donat Klasik Keju Gojek	Gojek	Pattiro	PCS	10.000,00	12.000,00
+P0204	Donat Klasik Gula Gojek	Gojek	Pattiro	PCS	10.000,00	12.000,00
+P0205	Donat Klasik Abon Gojek	Gojek	Pattiro	PCS	11.500,00	13.800,00
+P0206	Nasi Goreng Merah Gojek	Gojek	Pattiro	PCS	11.500,00	13.800,00
+P0207	Nasi Goreng Jakarta Gojek	Gojek	Pattiro	PCS	39.000,00	46.800,00
+P0208	Mie Goreng Jawa Gojek	Gojek	Pattiro	PCS	39.000,00	46.800,00
+P0209	Bubur Ayam Gojek	Gojek	Pattiro	PCS	39.000,00	46.800,00
+P0210	Bakmi Ayam Gojek	Gojek	Pattiro	PCS	39.000,00	46.800,00
+P0211	Es Teh Tarik Gojek	Gojek	Pattiro	PCS	32.500,00	39.000,00
+P0212	Es Cokelat Gojek	Gojek	Pattiro	PCS	32.500,00	39.000,00
+P0213	Es Kopi Susu Gojek	Gojek	Pattiro	PCS	32.500,00	39.000,00
+P0214	Pisang Goreng Gojek	Gojek	Pattiro	PCS	26.500,00	31.800,00
+P0215	Bubur Ayam Gojek	Gojek	Pattiro	PCS	32.500,00	39.000,00
+P0216	Bubur Ketan Gojek	Gojek	Pattiro	PCS	26.500,00	31.800,00
+P0217	Bubut Kacang Hijau Gojek	Gojek	Pattiro	PCS	26.500,00	31.800,00
+P0218	Bubur Mix Gojek	Gojek	Pattiro	PCS	26.500,00	31.800,00
+P0219	Bassang Gojek	Gojek	Pattiro	PCS	26.500,00	31.800,00
+P0220	Ubi Goreng Gojek	Gojek	Pattiro	PCS	26.500,00	31.800,00
+P0221	Cireng Gojek	Gojek	Pattiro	PCS	31.000,00	37.200,00
+P0222	Bakso Goreng Gojek	Gojek	Pattiro	PCS	31.000,00	37.200,00
+P0223	Tahu Bakso Gojek	Gojek	Pattiro	PCS	31.000,00	37.200,00
+P0224	+ Cup	Take Away	Pattiro	PCS	2.000,00	2.400,00
+P0225	Air Mineral Botol 600 Ml	Dine In	Pattiro	PCS	5.000,00	6.000,00
+P0226	Mika Roti	Take Away	Pattiro	PCS	2.000,00	2.400,00
+P0227	Box Gorengan	Take Away	Pattiro	PCS	1.000,00	1.200,00
+P0228	Pattiro Super Hemat 1	Dine In	Pattiro	PCS	71.000,00	85.200,00
+P0229	Pattiro Super Hemat 2	Dine In	Pattiro	PCS	98.500,00	118.200,00
+P0230	Pattiro Super Hemat 3	Dine In	Pattiro	PCS	106.500,00	127.800,00
+P0231	Pattiro Super Hemat 4	Dine In	Pattiro	PCS	115.000,00	138.000,00
+P0232	Shopee Ori	Dine In	Pattiro	PCS	50.875,00	61.050,00
+P0233	Paket Klasik 1	Dine In	Pattiro	PCS	27.000,00	32.400,00
+P0234	Paket Klasik 2	Dine In	Pattiro	PCS	47.000,00	56.400,00
+P0235	Air Mineral 600 Ml Grab	Grab	Pattiro	PCS	8.200,00	9.840,00
+P0236	Air Mineral 600 Ml Gojek	Gojek	Pattiro	PCS	8.200,00	9.840,00
+P0237	Topping Meses Roti Bakar	Topping	Pattiro	PCS	3.000,00	3.600,00
+P0238	Topping Keju Roti Bakar	Topping	Pattiro	PCS	4.000,00	4.800,00
+P0239	Es Pisang Ijo Shopee	Shopee	Pattiro	PCS	40.700,00	48.840,00
+P0241	Es Teler Teko Pattiro DI	Dine In	Pattiro	PCS	45.000,00	54.000,00
+P0242	Es Teler Teko Pattiro TA	Take Away	Pattiro	PCS	45.000,00	54.000,00
+P0243	Cup Dessert 500 ml	Take Away	Pattiro	PCS	2.000,00	2.400,00
