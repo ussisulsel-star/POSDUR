@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   Trash2, 
   Plus, 
@@ -9,7 +9,10 @@ import {
   CreditCard, 
   PauseCircle, 
   RotateCcw,
-  Tag
+  Tag,
+  Check,
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { CartItem, Customer } from '../../types/pos';
 import { formatRupiah, playBeep } from '../../services/storageService';
@@ -66,6 +69,132 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   const grandTotal = afterInvoiceDiscount + taxAmount;
   const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
+  // Pencarian pelanggan cepat (nama / nomor HP / kode member)
+  const [customerQuery, setCustomerQuery] = useState<string>('');
+  const [customerOpen, setCustomerOpen] = useState<boolean>(false);
+  const [activeCustomerIndex, setActiveCustomerIndex] = useState<number>(0);
+  const customerBoxRef = useRef<HTMLDivElement>(null);
+  const customerInputRef = useRef<HTMLInputElement>(null);
+  const customerOptionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const defaultCustomer = customers.find((c) => c.id === 'cust-umum') || customers[0];
+
+  const filteredCustomers = useMemo(() => {
+    const query = customerQuery.trim().toLowerCase();
+    if (!query) return customers;
+
+    const digits = customerQuery.replace(/\D/g, '');
+    return customers.filter((customer) => {
+      const phoneDigits = customer.phone.replace(/\D/g, '');
+      return (
+        customer.name.toLowerCase().includes(query) ||
+        customer.code.toLowerCase().includes(query) ||
+        (digits.length > 0 && phoneDigits.includes(digits))
+      );
+    });
+  }, [customers, customerQuery]);
+
+  const tierLabel = (customer: Customer) => {
+    switch (customer.tier) {
+      case 'MEMBER_GOLD':
+        return 'Member Gold';
+      case 'MEMBER_SILVER':
+        return 'Member Silver';
+      case 'GROSIR':
+        return 'Grosir';
+      default:
+        return 'Reguler';
+    }
+  };
+
+  useEffect(() => {
+    setActiveCustomerIndex(0);
+  }, [customerQuery]);
+
+  useEffect(() => {
+    if (!customerOpen) return;
+    customerOptionRefs.current[activeCustomerIndex]?.scrollIntoView({
+      block: 'nearest',
+    });
+  }, [activeCustomerIndex, customerOpen]);
+
+  useEffect(() => {
+    if (!customerOpen) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        customerBoxRef.current &&
+        !customerBoxRef.current.contains(event.target as Node)
+      ) {
+        setCustomerOpen(false);
+        setCustomerQuery('');
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [customerOpen]);
+
+  const handleSelectCustomer = (customer: Customer) => {
+    onSelectCustomer(customer);
+    playBeep('success');
+    setCustomerOpen(false);
+    setCustomerQuery('');
+    setActiveCustomerIndex(0);
+    customerInputRef.current?.blur();
+  };
+
+  const closeCustomerSearch = () => {
+    setCustomerOpen(false);
+    setCustomerQuery('');
+    setActiveCustomerIndex(0);
+  };
+
+  const handleCustomerKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (!customerOpen) {
+        setCustomerOpen(true);
+        setCustomerQuery('');
+        return;
+      }
+      setActiveCustomerIndex((index) =>
+        Math.min(index + 1, filteredCustomers.length - 1)
+      );
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!customerOpen) {
+        setCustomerOpen(true);
+        setCustomerQuery('');
+        return;
+      }
+      setActiveCustomerIndex((index) => Math.max(index - 1, 0));
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      if (!customerOpen) {
+        event.preventDefault();
+        setCustomerOpen(true);
+        setCustomerQuery('');
+        return;
+      }
+      event.preventDefault();
+      const customer = filteredCustomers[activeCustomerIndex];
+      if (customer) handleSelectCustomer(customer);
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeCustomerSearch();
+      customerInputRef.current?.blur();
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-white select-none">
       {/* Top Customer & Invoice Bar */}
@@ -84,25 +213,155 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         </div>
 
-        {/* Customer Selector */}
+        {/* Customer Selector — ketik untuk mencari nama / nomor HP */}
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+          <div ref={customerBoxRef} className="relative flex-1">
             <UserCheck className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
-            <select
-              value={selectedCustomer.id}
-              onChange={(e) => {
-                const found = customers.find((c) => c.id === e.target.value);
-                if (found) onSelectCustomer(found);
+            <input
+              ref={customerInputRef}
+              type="text"
+              role="combobox"
+              aria-label="Cari dan pilih pelanggan"
+              aria-expanded={customerOpen}
+              aria-controls="customer-search-options"
+              aria-autocomplete="list"
+              aria-activedescendant={
+                customerOpen && filteredCustomers[activeCustomerIndex]
+                  ? `customer-option-${filteredCustomers[activeCustomerIndex].id}`
+                  : undefined
+              }
+              value={customerOpen ? customerQuery : selectedCustomer.name}
+              onChange={(event) => {
+                setCustomerQuery(event.target.value);
+                setCustomerOpen(true);
               }}
-              aria-label="Pilih Pelanggan"
-              className="w-full pl-8 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-            >
-              {customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.tier === 'UMUM' ? 'Reguler' : `Member ${c.discountPercent}%`})
-                </option>
-              ))}
-            </select>
+              onFocus={() => {
+                setCustomerQuery('');
+                setCustomerOpen(true);
+              }}
+              onKeyDown={handleCustomerKeyDown}
+              placeholder="Cari nama atau no. HP pelanggan..."
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full pl-8 pr-14 py-1.5 bg-slate-800 border border-slate-700 rounded-md text-xs text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+
+            {customerOpen && customerQuery ? (
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setCustomerQuery('');
+                  setActiveCustomerIndex(0);
+                  customerInputRef.current?.focus();
+                }}
+                className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
+                title="Hapus pencarian"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : !customerOpen && defaultCustomer && selectedCustomer.id !== defaultCustomer.id ? (
+              <button
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => handleSelectCustomer(defaultCustomer)}
+                className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
+                title="Kembali ke Umum (Walk-in)"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+
+            {customerOpen && (
+              <div
+                id="customer-search-options"
+                role="listbox"
+                aria-label="Hasil pencarian pelanggan"
+                className="absolute left-0 right-0 top-full z-40 mt-1 max-h-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-800 shadow-2xl"
+              >
+                {filteredCustomers.length === 0 ? (
+                  <div className="px-3 py-5 text-center">
+                    <p className="text-xs font-semibold text-slate-200">
+                      Pelanggan tidak ditemukan
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Tidak ada nama atau nomor HP yang cocok dengan
+                      &ldquo;{customerQuery}&rdquo;.
+                    </p>
+                    <button
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => {
+                        closeCustomerSearch();
+                        onOpenNewCustomerModal();
+                      }}
+                      className="mt-3 rounded-md bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-blue-700"
+                    >
+                      + Tambah Pelanggan Baru
+                    </button>
+                  </div>
+                ) : (
+                  filteredCustomers.map((customer, index) => {
+                    const isActive = index === activeCustomerIndex;
+                    const isSelected = customer.id === selectedCustomer.id;
+
+                    return (
+                      <button
+                        key={customer.id}
+                        ref={(element) => {
+                          customerOptionRefs.current[index] = element;
+                        }}
+                        id={`customer-option-${customer.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onMouseEnter={() => setActiveCustomerIndex(index)}
+                        onClick={() => handleSelectCustomer(customer)}
+                        className={`flex w-full flex-col px-2.5 py-2 text-left transition-colors ${
+                          isActive
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-200 hover:bg-slate-700'
+                        }`}
+                      >
+                        <span className="flex w-full items-center gap-2">
+                          <span className="truncate text-xs font-semibold">
+                            {customer.name}
+                          </span>
+                          {isSelected && (
+                            <Check
+                              className={`ml-auto h-3.5 w-3.5 shrink-0 ${
+                                isActive ? 'text-white' : 'text-blue-400'
+                              }`}
+                            />
+                          )}
+                        </span>
+                        <span
+                          className={`mt-0.5 w-full truncate font-mono text-[10px] ${
+                            isActive ? 'text-blue-100' : 'text-slate-400'
+                          }`}
+                        >
+                          {customer.phone || '-'} · {tierLabel(customer)}
+                          {customer.discountPercent > 0
+                            ? ` · Diskon ${customer.discountPercent}%`
+                            : ''}
+                          {customer.points > 0 ? ` · ${customer.points} pts` : ''}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+
+                {filteredCustomers.length > 0 && (
+                  <div className="flex items-center justify-between gap-2 border-t border-slate-700 px-2.5 py-1.5 text-[10px] text-slate-400">
+                    <span>{filteredCustomers.length} pelanggan</span>
+                    <span>↑↓ pilih · Enter pilih · Esc tutup</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <button
