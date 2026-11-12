@@ -94,6 +94,8 @@ export const MasterPointView: React.FC<MasterPointViewProps> = ({
   const canEditPoints = isAdmin(currentUser);
   const [draft, setDraft] = useState<PointSettings>(pointSettings);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [bulkPoints, setBulkPoints] = useState<number>(0);
 
   useEffect(() => {
@@ -121,19 +123,45 @@ export const MasterPointView: React.FC<MasterPointViewProps> = ({
     [products, draft]
   );
 
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(new Set(products.map((product) => product.categoryName)))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [products]
+  );
+
+  const brandOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(products.map((product) => product.brand || 'Tanpa Brand'))
+      ).sort((a, b) => a.localeCompare(b)),
+    [products]
+  );
+
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return products;
 
-    return products.filter(
-      (product) =>
+    return products.filter((product) => {
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        product.categoryName === selectedCategory;
+      const matchesBrand =
+        selectedBrand === 'all' ||
+        (product.brand || 'Tanpa Brand') === selectedBrand;
+
+      if (!matchesCategory || !matchesBrand) return false;
+      if (!query) return true;
+
+      return (
         product.name.toLowerCase().includes(query) ||
         product.code.toLowerCase().includes(query) ||
         product.barcode.includes(searchQuery) ||
         product.categoryName.toLowerCase().includes(query) ||
         (product.brand && product.brand.toLowerCase().includes(query))
-    );
-  }, [products, searchQuery]);
+      );
+    });
+  }, [products, searchQuery, selectedCategory, selectedBrand]);
 
   const visiblePointsTotal = useMemo(
     () =>
@@ -501,7 +529,7 @@ export const MasterPointView: React.FC<MasterPointViewProps> = ({
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 <input
@@ -512,6 +540,51 @@ export const MasterPointView: React.FC<MasterPointViewProps> = ({
                   className="w-full rounded-lg border border-slate-300 bg-white py-2 pl-8 pr-3 text-xs text-slate-800 placeholder:text-slate-400 sm:w-56"
                 />
               </div>
+
+              <select
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 focus:border-blue-400 focus:outline-none sm:w-40"
+                title="Filter berdasarkan kategori produk"
+              >
+                <option value="all">Semua Kategori</option>
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedBrand}
+                onChange={(event) => setSelectedBrand(event.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-semibold text-slate-700 focus:border-blue-400 focus:outline-none sm:w-40"
+                title="Filter berdasarkan brand produk"
+              >
+                <option value="all">Semua Brand</option>
+                {brandOptions.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+
+              {(searchQuery.trim() !== '' ||
+                selectedCategory !== 'all' ||
+                selectedBrand !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                    setSelectedBrand('all');
+                  }}
+                  className="rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-100"
+                  title="Tampilkan semua produk kembali"
+                >
+                  Reset Filter
+                </button>
+              )}
 
               {canEditPoints && (
                 <div className="flex items-center gap-1.5">
@@ -594,7 +667,10 @@ export const MasterPointView: React.FC<MasterPointViewProps> = ({
                         </div>
                       </td>
                       <td className="px-3 py-2.5 text-[11px] text-slate-600">
-                        {product.categoryName}
+                        <div>{product.categoryName}</div>
+                        <div className="mt-0.5 text-[10px] text-slate-400">
+                          {product.brand || 'Tanpa Brand'}
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-center text-[11px] text-slate-600">
                         {product.unit}
