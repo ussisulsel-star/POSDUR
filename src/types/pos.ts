@@ -291,8 +291,18 @@ export interface Product {
   packageItems?: PackageItem[]; // Daftar rincian barang dalam paket (muncul di struk tanpa harga)
 }
 
-export type MemberTier = 'MEMBER_SILVER' | 'MEMBER_GOLD' | 'GROSIR';
+export type BaseMemberTier = 'MEMBER_SILVER' | 'MEMBER_GOLD' | 'GROSIR';
+export type MemberTier = BaseMemberTier | (string & {});
 export type CustomerTier = 'UMUM' | MemberTier;
+
+export const BASE_MEMBER_TIER_CODES: BaseMemberTier[] = [
+  'MEMBER_SILVER',
+  'MEMBER_GOLD',
+  'GROSIR',
+];
+
+export const isBaseMemberTier = (tier: string): tier is BaseMemberTier =>
+  (BASE_MEMBER_TIER_CODES as string[]).includes(tier);
 
 export interface MemberTierConfig {
   tier: MemberTier;
@@ -300,12 +310,6 @@ export interface MemberTierConfig {
   discountPercent: number;
   minPoints: number;
 }
-
-export const MEMBER_TIER_RANK: Record<MemberTier, number> = {
-  MEMBER_SILVER: 1,
-  MEMBER_GOLD: 2,
-  GROSIR: 3,
-};
 
 export const DEFAULT_MEMBER_TIER_CONFIGS: MemberTierConfig[] = [
   {
@@ -327,6 +331,14 @@ export const DEFAULT_MEMBER_TIER_CONFIGS: MemberTierConfig[] = [
     minPoints: 1000,
   },
 ];
+
+/** Urutkan tier dari ambang poin terendah ke tertinggi. */
+export const sortMemberTiers = (
+  configs: MemberTierConfig[]
+): MemberTierConfig[] =>
+  [...configs].sort(
+    (a, b) => a.minPoints - b.minPoints || a.label.localeCompare(b.label)
+  );
 
 /** Tier tertinggi yang sudah memenuhi ambang poin. */
 export const getEligibleMemberTier = (

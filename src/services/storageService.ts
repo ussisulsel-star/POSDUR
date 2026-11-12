@@ -1,4 +1,4 @@
-import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, SalesReturn, User, Outlet, StockTransfer, Category, EMoney, UserActivityLog, Brand, DEFAULT_BRANDS, MemberTierConfig, DEFAULT_MEMBER_TIER_CONFIGS, getEligibleMemberTier, MEMBER_TIER_RANK, syncBrandRegistry } from '../types/pos';
+import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, SalesReturn, User, Outlet, StockTransfer, Category, EMoney, UserActivityLog, Brand, DEFAULT_BRANDS, MemberTierConfig, DEFAULT_MEMBER_TIER_CONFIGS, getEligibleMemberTier, sortMemberTiers, syncBrandRegistry } from '../types/pos';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_USERS, INITIAL_OUTLETS, INITIAL_CONSOLIDATED_TRANSACTIONS, INITIAL_CATEGORIES, INITIAL_EMONEY, INITIAL_ACTIVITY_LOGS } from '../data/seedData';
 
 const STORAGE_KEYS = {
@@ -545,6 +545,41 @@ export const StorageService = {
 
   // Member tier settings (discount & minimum points)
   getMemberTiers(): MemberTierConfig[] {
+    const normalizeTier = (
+      item: Partial<MemberTierConfig> | null | undefined,
+      fallback?: MemberTierConfig
+    ): MemberTierConfig | null => {
+      const tier =
+        typeof item?.tier === 'string' && item.tier.trim()
+          ? item.tier.trim()
+          : fallback?.tier;
+      if (!tier) return null;
+
+      return {
+        tier,
+        label:
+          (typeof item?.label === 'string' && item.label.trim()) ||
+          fallback?.label ||
+          tier,
+        discountPercent: Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              Number(item?.discountPercent ?? fallback?.discountPercent ?? 0)
+            )
+          )
+        ),
+        minPoints:
+          tier === 'MEMBER_SILVER'
+            ? 0
+            : Math.max(
+                0,
+                Math.floor(Number(item?.minPoints ?? fallback?.minPoints ?? 0))
+              ),
+      };
+    };
+
     try {
       const data = localStorage.getItem(STORAGE_KEYS.MEMBER_TIERS);
       if (!data) {
@@ -552,39 +587,51 @@ export const StorageService = {
           STORAGE_KEYS.MEMBER_TIERS,
           JSON.stringify(DEFAULT_MEMBER_TIER_CONFIGS)
         );
-        return DEFAULT_MEMBER_TIER_CONFIGS;
+        return DEFAULT_MEMBER_TIER_CONFIGS.map((tier) => ({ ...tier }));
       }
 
-      const parsed: MemberTierConfig[] = JSON.parse(data);
-      const normalized = DEFAULT_MEMBER_TIER_CONFIGS.map((fallback) => {
-        const stored = Array.isArray(parsed)
-          ? parsed.find((item) => item.tier === fallback.tier)
-          : undefined;
-        if (!stored) return { ...fallback };
+      const parsed: unknown = JSON.parse(data);
+      const source = Array.isArray(parsed)
+        ? (parsed as Partial<MemberTierConfig>[])
+        : [];
 
-        return {
-          tier: fallback.tier,
-          label: stored.label || fallback.label,
-          discountPercent: Math.max(
-            0,
-            Math.min(100, Number(stored.discountPercent) || 0)
-          ),
-          minPoints:
-            fallback.tier === 'MEMBER_SILVER'
-              ? 0
-              : Math.max(0, Math.floor(Number(stored.minPoints) || 0)),
-        };
+      const normalized: MemberTierConfig[] = [];
+
+      // Tiga tier bawaan selalu tersedia agar data member lama tetap valid.
+      DEFAULT_MEMBER_TIER_CONFIGS.forEach((fallback) => {
+        const stored = source.find(
+          (item) => item && item.tier === fallback.tier
+        );
+        const config = normalizeTier(stored, fallback);
+        if (config) normalized.push(config);
       });
 
-      localStorage.setItem(STORAGE_KEYS.MEMBER_TIERS, JSON.stringify(normalized));
-      return normalized;
+      // Tier tambahan buatan pengguna.
+      source.forEach((item) => {
+        if (!item || typeof item.tier !== 'string') return;
+        const tier = item.tier.trim();
+        if (!tier || normalized.some((config) => config.tier === tier)) return;
+        const config = normalizeTier(item);
+        if (config) normalized.push(config);
+      });
+
+      const sorted = sortMemberTiers(normalized);
+      localStorage.setItem(STORAGE_KEYS.MEMBER_TIERS, JSON.stringify(sorted));
+      return sorted;
     } catch {
-      return DEFAULT_MEMBER_TIER_CONFIGS;
+      localStorage.setItem(
+        STORAGE_KEYS.MEMBER_TIERS,
+        JSON.stringify(DEFAULT_MEMBER_TIER_CONFIGS)
+      );
+      return DEFAULT_MEMBER_TIER_CONFIGS.map((tier) => ({ ...tier }));
     }
   },
 
   saveMemberTiers(tiers: MemberTierConfig[]) {
-    localStorage.setItem(STORAGE_KEYS.MEMBER_TIERS, JSON.stringify(tiers));
+    localStorage.setItem(
+      STORAGE_KEYS.MEMBER_TIERS,
+      JSON.stringify(sortMemberTiers(tiers))
+    );
   },
 
   // Shift Management
@@ -787,14 +834,17 @@ export const StorageService = {
           const earned = Math.floor(transaction.grandTotal / 10000);
           const nextPoints = c.points + earned;
           const eligibleTier = getEligibleMemberTier(nextPoints, tierConfigs);
-          const currentRank =
-            c.tier === 'UMUM' ? 0 : MEMBER_TIER_RANK[c.tier] ?? 0;
-          const eligibleRank = eligibleTier
-            ? MEMBER_TIER_RANK[eligibleTier.tier]
-            : 0;
+          const currentConfig = tierConfigs.find(
+            (config) => config.tier === c.tier
+          );
 
           // Naik tier otomatis saat poin mencapai ambang; tidak pernah turun otomatis.
-          if (eligibleTier && eligibleRank > currentRank) {
+          const shouldUpgrade =
+            eligibleTier !== undefined &&
+            (!currentConfig ||
+              eligibleTier.minPoints > currentConfig.minPoints);
+
+          if (eligibleTier && shouldUpgrade) {
             return {
               ...c,
               points: nextPoints,

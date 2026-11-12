@@ -15,7 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { CartItem, Customer } from '../../types/pos';
-import { formatRupiah, playBeep } from '../../services/storageService';
+import { formatRupiah, playBeep, StorageService } from '../../services/storageService';
 
 interface CartPanelProps {
   cart: CartItem[];
@@ -94,17 +94,17 @@ export const CartPanel: React.FC<CartPanelProps> = ({
     });
   }, [customers, customerQuery]);
 
+  const memberTierLabels = useMemo(
+    () =>
+      new Map(
+        StorageService.getMemberTiers().map((tier) => [tier.tier, tier.label])
+      ),
+    [customers]
+  );
+
   const tierLabel = (customer: Customer) => {
-    switch (customer.tier) {
-      case 'MEMBER_GOLD':
-        return 'Member Gold';
-      case 'MEMBER_SILVER':
-        return 'Member Silver';
-      case 'GROSIR':
-        return 'Grosir';
-      default:
-        return 'Reguler';
-    }
+    if (customer.tier === 'UMUM') return 'Reguler';
+    return memberTierLabels.get(customer.tier) ?? customer.tier;
   };
 
   useEffect(() => {
