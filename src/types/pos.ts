@@ -291,12 +291,58 @@ export interface Product {
   packageItems?: PackageItem[]; // Daftar rincian barang dalam paket (muncul di struk tanpa harga)
 }
 
+export type MemberTier = 'MEMBER_SILVER' | 'MEMBER_GOLD' | 'GROSIR';
+export type CustomerTier = 'UMUM' | MemberTier;
+
+export interface MemberTierConfig {
+  tier: MemberTier;
+  label: string;
+  discountPercent: number;
+  minPoints: number;
+}
+
+export const MEMBER_TIER_RANK: Record<MemberTier, number> = {
+  MEMBER_SILVER: 1,
+  MEMBER_GOLD: 2,
+  GROSIR: 3,
+};
+
+export const DEFAULT_MEMBER_TIER_CONFIGS: MemberTierConfig[] = [
+  {
+    tier: 'MEMBER_SILVER',
+    label: 'Silver',
+    discountPercent: 2,
+    minPoints: 0,
+  },
+  {
+    tier: 'MEMBER_GOLD',
+    label: 'Gold',
+    discountPercent: 5,
+    minPoints: 250,
+  },
+  {
+    tier: 'GROSIR',
+    label: 'Grosir',
+    discountPercent: 8,
+    minPoints: 1000,
+  },
+];
+
+/** Tier tertinggi yang sudah memenuhi ambang poin. */
+export const getEligibleMemberTier = (
+  points: number,
+  configs: MemberTierConfig[]
+): MemberTierConfig | undefined =>
+  [...configs]
+    .sort((a, b) => b.minPoints - a.minPoints)
+    .find((config) => points >= config.minPoints);
+
 export interface Customer {
   id: string;
   code: string;
   name: string;
   phone: string;
-  tier: 'UMUM' | 'MEMBER_SILVER' | 'MEMBER_GOLD' | 'GROSIR';
+  tier: CustomerTier;
   discountPercent: number;
   points: number;
   address?: string;

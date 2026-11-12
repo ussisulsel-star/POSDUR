@@ -961,7 +961,7 @@ const PROJECT_FOLDER_STRUCTURE = `ketoko-pos-fullstack/
 │   │   ├── master/
 │   │   │   ├── MasterDataView.tsx      # Manajemen Produk & Pelanggan
 │   │   │   ├── MasterBrandView.tsx     # Registri Brand & Identitas Outlet
-│   │   │   ├── MasterMemberView.tsx    # Member, Diskon & Poin Loyalitas
+│   │   │   ├── MasterMemberView.tsx    # Pengaturan Tier Member (Diskon & Poin)
 │   │   │   └── masterTabs.ts           # Definisi submenu Master Data
 │   │   ├── reports/
 │   │   │   ├── ReportsView.tsx         # Omset & Audit Shift Rekonsiliasi

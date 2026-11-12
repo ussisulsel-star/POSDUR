@@ -37,7 +37,7 @@ import {
   BRAND_CONFIGS,
   getBrandConfig
 } from '../../types/pos';
-import { formatRupiah, playBeep } from '../../services/storageService';
+import { formatRupiah, playBeep, StorageService } from '../../services/storageService';
 import {
   canEditCategories,
   canEditCustomers,
@@ -134,6 +134,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const canResetSection = canResetDatabase(currentUser);
   const canViewEMoneySection = isAdmin(currentUser) || isSupervisor(currentUser);
   const canViewCustomersSection = isAdmin(currentUser) || isSupervisor(currentUser);
+  const memberTierConfigs = StorageService.getMemberTiers();
 
   // Pastikan subtab aktif selalu diizinkan untuk user saat ini (fail-closed).
   useEffect(() => {
@@ -586,7 +587,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 : activeSubTab === 'emoney'
                 ? emoneyList.length
                 : activeSubTab === 'members'
-                ? customers.filter((customer) => customer.tier !== 'UMUM').length
+                ? memberTierConfigs.length
                 : customers.length}
             </span>
           </span>
@@ -814,13 +815,17 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
               {activeSubTab === 'customers' && canEditCustomersSection && (
                 <button
                   onClick={() => {
+                    const silverConfig =
+                      memberTierConfigs.find(
+                        (config) => config.tier === 'MEMBER_SILVER'
+                      ) ?? memberTierConfigs[0];
                     const newC: Customer = {
                       id: 'cust-' + Date.now(),
                       code: 'PLG-' + Math.floor(1000 + Math.random() * 9000),
                       name: '',
                       phone: '',
                       tier: 'MEMBER_SILVER',
-                      discountPercent: 2,
+                      discountPercent: silverConfig?.discountPercent ?? 0,
                       points: 50,
                       address: '',
                     };
@@ -1391,7 +1396,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                         <td className="py-2.5 px-3 font-mono text-slate-600">{c.phone}</td>
                         <td className="py-2.5 px-3">
                           <span className="px-2 py-0.5 bg-blue-50 text-blue-700 font-semibold rounded text-[10px]">
-                            {c.tier}
+                            {c.tier === 'UMUM'
+                              ? 'Umum'
+                              : memberTierConfigs.find(
+                                  (config) => config.tier === c.tier
+                                )?.label ?? c.tier}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-center font-bold text-emerald-600 font-mono">
@@ -2096,22 +2105,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     value={editingCustomer.tier}
                     onChange={(e) => {
                       const tier = e.target.value as Customer['tier'];
-                      let disc = 0;
-                      if (tier === 'MEMBER_SILVER') disc = 2;
-                      else if (tier === 'MEMBER_GOLD') disc = 5;
-                      else if (tier === 'GROSIR') disc = 8;
+                      const tierConfig = memberTierConfigs.find(
+                        (config) => config.tier === tier
+                      );
                       setEditingCustomer({
                         ...editingCustomer,
                         tier,
-                        discountPercent: disc,
+                        discountPercent: tierConfig
+                          ? tierConfig.discountPercent
+                          : 0,
                       });
                     }}
                     className="w-full p-2 bg-slate-50 border border-slate-300 rounded font-semibold cursor-pointer"
                   >
                     <option value="UMUM">UMUM (Walk-in)</option>
-                    <option value="MEMBER_SILVER">MEMBER SILVER (2%)</option>
-                    <option value="MEMBER_GOLD">MEMBER GOLD (5%)</option>
-                    <option value="GROSIR">GROSIR (8%)</option>
+                    {memberTierConfigs.map((config) => (
+                      <option key={config.tier} value={config.tier}>
+                        {config.label.toUpperCase()} ({config.discountPercent}% · min{' '}
+                        {config.minPoints} poin)
+                      </option>
+                    ))}
                   </select>
                 </div>
 

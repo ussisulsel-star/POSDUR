@@ -251,6 +251,14 @@ export default function App() {
     user,
   ]);
 
+  // Sinkronkan pelanggan terpilih saat data member berubah (tier/diskon/poin)
+  useEffect(() => {
+    setSelectedCustomer((previous) => {
+      const latest = customers.find((customer) => customer.id === previous.id);
+      return latest ?? previous;
+    });
+  }, [customers]);
+
   // Cart operations
   const handleAddToCart = (product: Product) => {
     setCart((prev) => {

@@ -1,4 +1,4 @@
-import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, SalesReturn, User, Outlet, StockTransfer, Category, EMoney, UserActivityLog, Brand, DEFAULT_BRANDS, syncBrandRegistry } from '../types/pos';
+import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, SalesReturn, User, Outlet, StockTransfer, Category, EMoney, UserActivityLog, Brand, DEFAULT_BRANDS, MemberTierConfig, DEFAULT_MEMBER_TIER_CONFIGS, getEligibleMemberTier, MEMBER_TIER_RANK, syncBrandRegistry } from '../types/pos';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_USERS, INITIAL_OUTLETS, INITIAL_CONSOLIDATED_TRANSACTIONS, INITIAL_CATEGORIES, INITIAL_EMONEY, INITIAL_ACTIVITY_LOGS } from '../data/seedData';
 
 const STORAGE_KEYS = {
@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   PRODUCT_SEED_VERSION: 'ketoko_pos_product_seed_version',
   EMONEY: 'ketoko_pos_emoney',
   CUSTOMERS: 'ketoko_pos_customers',
+  MEMBER_TIERS: 'ketoko_pos_member_tiers',
   ACTIVE_SHIFT: 'ketoko_pos_active_shift',
   SHIFT_HISTORY: 'ketoko_pos_shift_history',
   TRANSACTIONS: 'ketoko_pos_transactions',
@@ -542,6 +543,50 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
   },
 
+  // Member tier settings (discount & minimum points)
+  getMemberTiers(): MemberTierConfig[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.MEMBER_TIERS);
+      if (!data) {
+        localStorage.setItem(
+          STORAGE_KEYS.MEMBER_TIERS,
+          JSON.stringify(DEFAULT_MEMBER_TIER_CONFIGS)
+        );
+        return DEFAULT_MEMBER_TIER_CONFIGS;
+      }
+
+      const parsed: MemberTierConfig[] = JSON.parse(data);
+      const normalized = DEFAULT_MEMBER_TIER_CONFIGS.map((fallback) => {
+        const stored = Array.isArray(parsed)
+          ? parsed.find((item) => item.tier === fallback.tier)
+          : undefined;
+        if (!stored) return { ...fallback };
+
+        return {
+          tier: fallback.tier,
+          label: stored.label || fallback.label,
+          discountPercent: Math.max(
+            0,
+            Math.min(100, Number(stored.discountPercent) || 0)
+          ),
+          minPoints:
+            fallback.tier === 'MEMBER_SILVER'
+              ? 0
+              : Math.max(0, Math.floor(Number(stored.minPoints) || 0)),
+        };
+      });
+
+      localStorage.setItem(STORAGE_KEYS.MEMBER_TIERS, JSON.stringify(normalized));
+      return normalized;
+    } catch {
+      return DEFAULT_MEMBER_TIER_CONFIGS;
+    }
+  },
+
+  saveMemberTiers(tiers: MemberTierConfig[]) {
+    localStorage.setItem(STORAGE_KEYS.MEMBER_TIERS, JSON.stringify(tiers));
+  },
+
   // Shift Management
   getActiveShift(): Shift | null {
     try {
@@ -735,11 +780,30 @@ export const StorageService = {
     // Award loyalty points to customer if member
     if (transaction.customerId && transaction.customerId !== 'cust-umum') {
       const customers = this.getCustomers();
+      const tierConfigs = this.getMemberTiers();
       const updated = customers.map((c) => {
         if (c.id === transaction.customerId) {
           // 1 point per Rp 10.000
           const earned = Math.floor(transaction.grandTotal / 10000);
-          return { ...c, points: c.points + earned };
+          const nextPoints = c.points + earned;
+          const eligibleTier = getEligibleMemberTier(nextPoints, tierConfigs);
+          const currentRank =
+            c.tier === 'UMUM' ? 0 : MEMBER_TIER_RANK[c.tier] ?? 0;
+          const eligibleRank = eligibleTier
+            ? MEMBER_TIER_RANK[eligibleTier.tier]
+            : 0;
+
+          // Naik tier otomatis saat poin mencapai ambang; tidak pernah turun otomatis.
+          if (eligibleTier && eligibleRank > currentRank) {
+            return {
+              ...c,
+              points: nextPoints,
+              tier: eligibleTier.tier,
+              discountPercent: eligibleTier.discountPercent,
+            };
+          }
+
+          return { ...c, points: nextPoints };
         }
         return c;
       });
@@ -895,6 +959,10 @@ export const StorageService = {
     localStorage.setItem(STORAGE_KEYS.PRODUCT_SEED_VERSION, PRODUCT_SEED_VERSION);
     localStorage.setItem(STORAGE_KEYS.EMONEY, JSON.stringify(INITIAL_EMONEY));
     localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(INITIAL_CUSTOMERS));
+    localStorage.setItem(
+      STORAGE_KEYS.MEMBER_TIERS,
+      JSON.stringify(DEFAULT_MEMBER_TIER_CONFIGS)
+    );
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(INITIAL_CONSOLIDATED_TRANSACTIONS));
     localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(INITIAL_ACTIVITY_LOGS));

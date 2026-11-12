@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { X, UserPlus, CheckCircle } from 'lucide-react';
-import { Customer } from '../../types/pos';
-import { playBeep } from '../../services/storageService';
+import {
+  Customer,
+  MemberTier,
+} from '../../types/pos';
+import { playBeep, StorageService } from '../../services/storageService';
 
 interface NewCustomerModalProps {
   isOpen: boolean;
@@ -16,18 +19,20 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
 }) => {
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
-  const [tier, setTier] = useState<'MEMBER_SILVER' | 'MEMBER_GOLD' | 'GROSIR'>('MEMBER_SILVER');
+  const [tier, setTier] = useState<MemberTier>('MEMBER_SILVER');
   const [address, setAddress] = useState<string>('');
 
   if (!isOpen) return null;
+
+  const tierConfigs = StorageService.getMemberTiers();
+  const activeTierConfig =
+    tierConfigs.find((config) => config.tier === tier) ?? tierConfigs[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
-    let discountPercent = 2;
-    if (tier === 'MEMBER_GOLD') discountPercent = 5;
-    if (tier === 'GROSIR') discountPercent = 8;
+    const discountPercent = activeTierConfig?.discountPercent ?? 0;
 
     const newCust: Customer = {
       id: 'cust-' + Date.now(),
@@ -92,13 +97,19 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
             <label className="block font-semibold text-slate-700 mb-1">Tingkat Member (Tier):</label>
             <select
               value={tier}
-              onChange={(e) => setTier(e.target.value as 'MEMBER_SILVER' | 'MEMBER_GOLD' | 'GROSIR')}
+              onChange={(e) => setTier(e.target.value as MemberTier)}
               className="w-full p-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 font-medium focus:outline-none"
             >
-              <option value="MEMBER_SILVER">Member Silver (Diskon 2% + Poin)</option>
-              <option value="MEMBER_GOLD">Member Gold (Diskon 5% + Poin)</option>
-              <option value="GROSIR">Mitra Toko / Grosir (Diskon 8% / Harga Grosir)</option>
+              {tierConfigs.map((config) => (
+                <option key={config.tier} value={config.tier}>
+                  {config.label} (Diskon {config.discountPercent}% · min{' '}
+                  {config.minPoints.toLocaleString('id-ID')} poin)
+                </option>
+              ))}
             </select>
+            <p className="mt-1 text-[10px] text-slate-500">
+              Diskon mengikuti pengaturan tier di Master Data → Master Member.
+            </p>
           </div>
 
           <div>
