@@ -12,6 +12,7 @@ import {
   Tag,
   Check,
   ChevronDown,
+  Coins,
   X
 } from 'lucide-react';
 import { CartItem, Customer } from '../../types/pos';
@@ -35,6 +36,11 @@ interface CartPanelProps {
   setTaxEnabled: (enabled: boolean) => void;
   onOpenNewCustomerModal: () => void;
   canDiscount: boolean;
+  pointDiscountAmount: number;
+  redeemedPoints: number;
+  estimatedEarnedPoints: number;
+  maxRedeemablePoints: number;
+  onOpenRedeemPoints: () => void;
 }
 
 export const CartPanel: React.FC<CartPanelProps> = ({
@@ -54,6 +60,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   setTaxEnabled,
   onOpenNewCustomerModal,
   canDiscount,
+  pointDiscountAmount,
+  redeemedPoints,
+  estimatedEarnedPoints,
+  maxRedeemablePoints,
+  onOpenRedeemPoints,
 }) => {
   // Compute financial totals
   const rawSubtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
@@ -63,10 +74,11 @@ export const CartPanel: React.FC<CartPanelProps> = ({
   // Invoice-level discount
   const invoiceDiscountAmount = Math.round((subtotalAfterItemDiscounts * invoiceDiscountPercent) / 100);
   const afterInvoiceDiscount = Math.max(0, subtotalAfterItemDiscounts - invoiceDiscountAmount);
+  const afterPointDiscount = Math.max(0, afterInvoiceDiscount - pointDiscountAmount);
 
   // Tax (PPN 11%)
-  const taxAmount = taxEnabled ? Math.round(afterInvoiceDiscount * 0.11) : 0;
-  const grandTotal = afterInvoiceDiscount + taxAmount;
+  const taxAmount = taxEnabled ? Math.round(afterPointDiscount * 0.11) : 0;
+  const grandTotal = afterPointDiscount + taxAmount;
   const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
   // Pencarian pelanggan cepat (nama / nomor HP / kode member)
@@ -560,6 +572,73 @@ export const CartPanel: React.FC<CartPanelProps> = ({
               </span>
             )}
           </div>
+
+          {/* Tukar Poin Member */}
+          <div className="flex items-center justify-between text-slate-600">
+            <div className="flex items-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-amber-500" />
+              <span>Tukar Poin:</span>
+              {selectedCustomer.id !== 'cust-umum' &&
+              selectedCustomer.tier !== 'UMUM' ? (
+                <span className="rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-700">
+                  {selectedCustomer.points.toLocaleString('id-ID')} pts
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold text-slate-400">
+                  Walk-in
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {pointDiscountAmount > 0 && (
+                <span className="font-mono-numbers font-medium text-rose-600">
+                  -{formatRupiah(pointDiscountAmount)}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={onOpenRedeemPoints}
+                disabled={cart.length === 0}
+                className="flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Tukar poin member menjadi potongan tagihan"
+              >
+                <Coins className="w-3 h-3" />
+                Tukar Poin
+              </button>
+            </div>
+          </div>
+
+          {(redeemedPoints > 0 || estimatedEarnedPoints > 0) && (
+            <div className="flex items-center justify-between rounded-lg border border-amber-200/70 bg-amber-50/60 px-2 py-1 text-[10px] text-amber-800">
+              <span>
+                {redeemedPoints > 0
+                  ? `${redeemedPoints.toLocaleString('id-ID')} poin ditukar`
+                  : 'Poin transaksi ini'}
+              </span>
+              <span className="font-mono font-bold">
+                {redeemedPoints > 0
+                  ? `sisa ${Math.max(
+                      0,
+                      selectedCustomer.points - redeemedPoints
+                    ).toLocaleString('id-ID')} pts`
+                  : `+${estimatedEarnedPoints.toLocaleString('id-ID')} pts`}
+                {redeemedPoints > 0 && estimatedEarnedPoints > 0
+                  ? ` · +${estimatedEarnedPoints.toLocaleString('id-ID')} pts`
+                  : ''}
+              </span>
+            </div>
+          )}
+
+          {maxRedeemablePoints === 0 &&
+            selectedCustomer.id !== 'cust-umum' &&
+            selectedCustomer.tier !== 'UMUM' &&
+            cart.length > 0 &&
+            selectedCustomer.points > 0 && (
+              <p className="text-[10px] text-slate-400">
+                Poin belum bisa ditukar pada tagihan ini (cek minimal tukar &
+                nilai tukar di Master Point).
+              </p>
+            )}
 
           {/* PPN 11% Toggle */}
           <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-slate-200/80">

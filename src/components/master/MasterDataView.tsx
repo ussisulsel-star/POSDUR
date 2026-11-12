@@ -35,7 +35,9 @@ import {
   BrandName,
   AVAILABLE_BRANDS,
   BRAND_CONFIGS,
-  getBrandConfig
+  getBrandConfig,
+  PointSettings,
+  getProductPointValue
 } from '../../types/pos';
 import { formatRupiah, playBeep, StorageService } from '../../services/storageService';
 import {
@@ -55,6 +57,7 @@ import { ExcelProductUploadModal } from './ExcelProductUploadModal';
 import { PackageProductModal } from './PackageProductModal';
 import { MasterBrandView } from './MasterBrandView';
 import { MasterMemberView } from './MasterMemberView';
+import { MasterPointView } from './MasterPointView';
 import {
   MASTER_TABS,
   getAllowedMasterTabs,
@@ -73,6 +76,8 @@ interface MasterDataViewProps {
   brands: Brand[];
   masterTab?: MasterTab;
   onMasterTabChange?: (tab: MasterTab) => void;
+  pointSettings: PointSettings;
+  onUpdatePointSettings: (settings: PointSettings) => void;
   onUpdateProducts: (products: Product[]) => void;
   onUpdateCategories: (categories: Category[]) => void;
   onUpdateCustomers: (customers: Customer[]) => void;
@@ -97,6 +102,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   brands,
   masterTab: controlledMasterTab,
   onMasterTabChange,
+  pointSettings,
+  onUpdatePointSettings,
   onUpdateProducts,
   onUpdateCategories,
   onUpdateCustomers,
@@ -588,6 +595,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 ? emoneyList.length
                 : activeSubTab === 'members'
                 ? memberTierConfigs.length
+                : activeSubTab === 'points'
+                ? products.filter(
+                    (product) =>
+                      getProductPointValue(product.id, pointSettings) > 0
+                  ).length
                 : customers.length}
             </span>
           </span>
@@ -657,9 +669,20 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         />
       )}
 
+      {/* 3c. MASTER POINT & TUKAR POIN */}
+      {activeSubTab === 'points' && (
+        <MasterPointView
+          products={products}
+          currentUser={currentUser}
+          pointSettings={pointSettings}
+          onUpdatePointSettings={onUpdatePointSettings}
+        />
+      )}
+
       {/* 4. MASTER PRODUK, KATEGORI, E-MONEY, DAN PELANGGAN */}
       {activeSubTab !== 'brands' &&
         activeSubTab !== 'members' &&
+        activeSubTab !== 'points' &&
         activeSubTab !== 'outlets' &&
         activeSubTab !== 'users' &&
         (activeSubTab !== 'emoney' || canViewEMoneySection) &&

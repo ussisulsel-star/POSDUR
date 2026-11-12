@@ -139,10 +139,27 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 <span>Subtotal         :</span>
                 <span>{formatRupiah(transaction.subtotal)}</span>
               </div>
-              {transaction.discountTotal > 0 && (
+              {transaction.discountTotal - (transaction.pointDiscount || 0) > 0 && (
                 <div className="flex justify-between text-rose-600">
                   <span>Total Diskon     :</span>
-                  <span>-{formatRupiah(transaction.discountTotal)}</span>
+                  <span>
+                    -
+                    {formatRupiah(
+                      transaction.discountTotal - (transaction.pointDiscount || 0)
+                    )}
+                  </span>
+                </div>
+              )}
+              {(transaction.pointsRedeemed || 0) > 0 && (
+                <div className="flex justify-between text-rose-600">
+                  <span>Tukar Poin ({transaction.pointsRedeemed}) :</span>
+                  <span>-{formatRupiah(transaction.pointDiscount || 0)}</span>
+                </div>
+              )}
+              {(transaction.pointsEarned || 0) > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <span>Poin Didapat     :</span>
+                  <span>+{transaction.pointsEarned} poin</span>
                 </div>
               )}
               {transaction.taxTotal > 0 && (

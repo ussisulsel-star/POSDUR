@@ -668,7 +668,7 @@ CREATE TABLE customers (
     code VARCHAR(50) NOT NULL,
     name VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
-    tier VARCHAR(50) NOT NULL DEFAULT 'UMUM', -- 'UMUM', 'MEMBER_SILVER', 'MEMBER_GOLD', 'GROSIR'
+    tier VARCHAR(50) NOT NULL DEFAULT 'UMUM', -- 'UMUM', tier bawaan & tier kustom (mis. MEMBER_PLATINUM)
     discount_percent NUMERIC(5,2) DEFAULT 0,
     points INTEGER DEFAULT 0,
     address TEXT,
@@ -676,6 +676,22 @@ CREATE TABLE customers (
 );
 
 CREATE INDEX idx_customers_code ON customers(company_id, code);
+
+-- 5b. POIN PER PRODUK, MASA AKTIF & NILAI TUKAR
+CREATE TABLE point_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id VARCHAR(50) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    active_from DATE,
+    active_until DATE,
+    redeem_value NUMERIC(15,2) NOT NULL DEFAULT 0, -- Rupiah per 1 poin
+    min_redeem_points INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE product_points (
+    product_id UUID PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE,
+    points_per_unit INTEGER NOT NULL DEFAULT 0
+);
 
 -- 6. POS SHIFTS (Sesi Kasir & Buka-Tutup Laci)
 CREATE TABLE pos_shifts (
@@ -953,6 +969,7 @@ const PROJECT_FOLDER_STRUCTURE = `ketoko-pos-fullstack/
 │   │   │   ├── ProductCatalog.tsx      # Barcode scanner input & touch grid
 │   │   │   ├── CartPanel.tsx           # Keranjang, Qty, LED Total Display
 │   │   │   ├── PaymentModal.tsx        # Tunai, QRIS, Kartu, Piutang
+│   │   │   ├── RedeemPointsModal.tsx   # Tukar Poin Member di Kasir
 │   │   │   ├── ReceiptModal.tsx        # Thermal Receipt 58mm/80mm preview
 │   │   │   ├── ShiftModal.tsx          # Buka/Tutup Kasir & Denominasi Fisik
 │   │   │   ├── HoldOrdersModal.tsx     # Tahan/Pending Transaksi (F7)
@@ -962,6 +979,7 @@ const PROJECT_FOLDER_STRUCTURE = `ketoko-pos-fullstack/
 │   │   │   ├── MasterDataView.tsx      # Manajemen Produk & Pelanggan
 │   │   │   ├── MasterBrandView.tsx     # Registri Brand & Identitas Outlet
 │   │   │   ├── MasterMemberView.tsx    # Pengaturan Tier Member (Diskon & Poin)
+│   │   │   ├── MasterPointView.tsx     # Poin per Produk, Masa Aktif & Tukar Poin
 │   │   │   └── masterTabs.ts           # Definisi submenu Master Data
 │   │   ├── reports/
 │   │   │   ├── ReportsView.tsx         # Omset & Audit Shift Rekonsiliasi

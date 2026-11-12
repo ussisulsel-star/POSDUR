@@ -1,4 +1,4 @@
-import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, SalesReturn, User, Outlet, StockTransfer, Category, EMoney, UserActivityLog, Brand, DEFAULT_BRANDS, MemberTierConfig, DEFAULT_MEMBER_TIER_CONFIGS, getEligibleMemberTier, sortMemberTiers, syncBrandRegistry } from '../types/pos';
+import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, SalesReturn, User, Outlet, StockTransfer, Category, EMoney, UserActivityLog, Brand, DEFAULT_BRANDS, MemberTierConfig, DEFAULT_MEMBER_TIER_CONFIGS, getEligibleMemberTier, sortMemberTiers, syncBrandRegistry, PointSettings, getDefaultPointSettings, calculateEarnedPoints, getPointDiscountAmount } from '../types/pos';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_USERS, INITIAL_OUTLETS, INITIAL_CONSOLIDATED_TRANSACTIONS, INITIAL_CATEGORIES, INITIAL_EMONEY, INITIAL_ACTIVITY_LOGS } from '../data/seedData';
 
 const STORAGE_KEYS = {
@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   EMONEY: 'ketoko_pos_emoney',
   CUSTOMERS: 'ketoko_pos_customers',
   MEMBER_TIERS: 'ketoko_pos_member_tiers',
+  POINT_SETTINGS: 'ketoko_pos_point_settings',
   ACTIVE_SHIFT: 'ketoko_pos_active_shift',
   SHIFT_HISTORY: 'ketoko_pos_shift_history',
   TRANSACTIONS: 'ketoko_pos_transactions',
@@ -45,6 +46,41 @@ export interface StoreSettings {
   taxEnabled: boolean;
   taxRate: number; // e.g. 11%
 }
+
+const normalizePointSettings = (
+  source?: Partial<PointSettings> | null
+): PointSettings => {
+  const defaults = getDefaultPointSettings();
+  const productPoints: Record<string, number> = {};
+
+  if (source?.productPoints && typeof source.productPoints === 'object') {
+    Object.entries(source.productPoints).forEach(([productId, value]) => {
+      const points = Math.max(0, Math.floor(Number(value) || 0));
+      if (productId && points > 0) productPoints[productId] = points;
+    });
+  }
+
+  return {
+    enabled: source?.enabled ?? defaults.enabled,
+    activeFrom:
+      typeof source?.activeFrom === 'string'
+        ? source.activeFrom
+        : defaults.activeFrom,
+    activeUntil:
+      typeof source?.activeUntil === 'string'
+        ? source.activeUntil
+        : defaults.activeUntil,
+    redeemValue: Math.max(
+      0,
+      Math.floor(Number(source?.redeemValue ?? defaults.redeemValue) || 0)
+    ),
+    minRedeemPoints: Math.max(
+      0,
+      Math.floor(Number(source?.minRedeemPoints ?? defaults.minRedeemPoints) || 0)
+    ),
+    productPoints,
+  };
+};
 
 const DEFAULT_SETTINGS: StoreSettings = {  companyId: '99999',
   storeName: 'TOKO BERKAH SEJAHTERA',
@@ -634,6 +670,54 @@ export const StorageService = {
     );
   },
 
+  // Point program settings (earning per product, active period, redemption)
+  getPointSettings(): PointSettings {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.POINT_SETTINGS);
+      if (!data) {
+        const defaults = getDefaultPointSettings();
+        localStorage.setItem(
+          STORAGE_KEYS.POINT_SETTINGS,
+          JSON.stringify(defaults)
+        );
+        return defaults;
+      }
+
+      const parsed = JSON.parse(data) as Partial<PointSettings>;
+      const normalized = normalizePointSettings(parsed);
+      localStorage.setItem(
+        STORAGE_KEYS.POINT_SETTINGS,
+        JSON.stringify(normalized)
+      );
+      return normalized;
+    } catch {
+      const defaults = getDefaultPointSettings();
+      localStorage.setItem(
+        STORAGE_KEYS.POINT_SETTINGS,
+        JSON.stringify(defaults)
+      );
+      return defaults;
+    }
+  },
+
+  savePointSettings(settings: PointSettings): PointSettings {
+    const normalized = normalizePointSettings(settings);
+    localStorage.setItem(
+      STORAGE_KEYS.POINT_SETTINGS,
+      JSON.stringify(normalized)
+    );
+    return normalized;
+  },
+
+  resetPointSettings(): PointSettings {
+    const defaults = getDefaultPointSettings();
+    localStorage.setItem(
+      STORAGE_KEYS.POINT_SETTINGS,
+      JSON.stringify(defaults)
+    );
+    return defaults;
+  },
+
   // Shift Management
   getActiveShift(): Shift | null {
     try {
@@ -828,11 +912,28 @@ export const StorageService = {
     if (transaction.customerId && transaction.customerId !== 'cust-umum') {
       const customers = this.getCustomers();
       const tierConfigs = this.getMemberTiers();
+      const pointSettings = this.getPointSettings();
+
+      // Poin didapat dari konfigurasi per produk, bukan nominal belanja global.
+      const earned =
+        transaction.pointsEarned ??
+        calculateEarnedPoints(transaction.items, pointSettings);
+      const redeemed = Math.max(
+        0,
+        Math.floor(transaction.pointsRedeemed ?? 0)
+      );
+
+      // Simpan rincian poin pada transaksi agar struk & laporan konsisten.
+      transaction.pointsEarned = earned;
+      transaction.pointsRedeemed = redeemed;
+      transaction.pointDiscount =
+        transaction.pointDiscount ??
+        getPointDiscountAmount(redeemed, pointSettings);
+
       const updated = customers.map((c) => {
         if (c.id === transaction.customerId) {
-          // 1 point per Rp 10.000
-          const earned = Math.floor(transaction.grandTotal / 10000);
-          const nextPoints = c.points + earned;
+          // Poin ditukar dipotong lebih dulu, lalu poin belanja ditambahkan.
+          const nextPoints = Math.max(0, c.points - redeemed + earned);
           const eligibleTier = getEligibleMemberTier(nextPoints, tierConfigs);
           const currentConfig = tierConfigs.find(
             (config) => config.tier === c.tier
@@ -1012,6 +1113,10 @@ export const StorageService = {
     localStorage.setItem(
       STORAGE_KEYS.MEMBER_TIERS,
       JSON.stringify(DEFAULT_MEMBER_TIER_CONFIGS)
+    );
+    localStorage.setItem(
+      STORAGE_KEYS.POINT_SETTINGS,
+      JSON.stringify(getDefaultPointSettings())
     );
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(INITIAL_CONSOLIDATED_TRANSACTIONS));

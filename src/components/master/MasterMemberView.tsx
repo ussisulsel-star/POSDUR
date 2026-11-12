@@ -480,7 +480,8 @@ export const MasterMemberView: React.FC<MasterMemberViewProps> = ({
             <div className="rounded-xl bg-slate-50 p-3">
               <p className="font-bold text-slate-800">1. Kumpulkan poin</p>
               <p className="mt-1 leading-relaxed">
-                Member mendapat 1 poin untuk setiap Rp 10.000 total belanja.
+                Member mendapat poin sesuai pengaturan poin per produk di menu
+                Master Point, selama masa aktif poin berlaku.
               </p>
             </div>
             <div className="rounded-xl bg-slate-50 p-3">

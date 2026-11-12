@@ -349,6 +349,111 @@ export const getEligibleMemberTier = (
     .sort((a, b) => b.minPoints - a.minPoints)
     .find((config) => points >= config.minPoints);
 
+export interface PointSettings {
+  enabled: boolean;
+  activeFrom: string; // YYYY-MM-DD (inklusif)
+  activeUntil: string; // YYYY-MM-DD (inklusif, kosong = tanpa batas)
+  redeemValue: number; // Nilai tukar Rupiah untuk 1 poin
+  minRedeemPoints: number; // Minimal poin yang boleh ditukar
+  productPoints: Record<string, number>; // productId -> poin per unit
+}
+
+export type PointProgramStatus = 'AKTIF' | 'BELUM_MULAI' | 'BERAKHIR' | 'NONAKTIF';
+
+export const getDefaultPointSettings = (): PointSettings => {
+  const year = new Date().getFullYear();
+  return {
+    enabled: true,
+    activeFrom: `${year}-01-01`,
+    activeUntil: `${year}-12-31`,
+    redeemValue: 100,
+    minRedeemPoints: 10,
+    productPoints: {},
+  };
+};
+
+const parsePointDate = (value: string, endOfDay = false): Date | null => {
+  if (!value) return null;
+  const parsed = new Date(
+    `${value}T${endOfDay ? '23:59:59.999' : '00:00:00.000'}`
+  );
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+/** Status program poin berdasarkan tanggal aktif dan tanggal berakhir. */
+export const getPointProgramStatus = (
+  settings: PointSettings,
+  now: Date = new Date()
+): PointProgramStatus => {
+  if (!settings.enabled) return 'NONAKTIF';
+
+  const start = parsePointDate(settings.activeFrom);
+  const end = parsePointDate(settings.activeUntil, true);
+
+  if (start && now.getTime() < start.getTime()) return 'BELUM_MULAI';
+  if (end && now.getTime() > end.getTime()) return 'BERAKHIR';
+  return 'AKTIF';
+};
+
+export const isPointProgramActive = (
+  settings: PointSettings,
+  now: Date = new Date()
+): boolean => getPointProgramStatus(settings, now) === 'AKTIF';
+
+/** Poin per unit untuk satu produk. */
+export const getProductPointValue = (
+  productId: string,
+  settings: PointSettings
+): number =>
+  Math.max(0, Math.floor(Number(settings.productPoints?.[productId] ?? 0) || 0));
+
+/** Total poin yang didapat dari isi keranjang saat program sedang aktif. */
+export const calculateEarnedPoints = (
+  items: Array<{ product: { id: string }; qty: number }>,
+  settings: PointSettings,
+  now: Date = new Date()
+): number => {
+  if (!isPointProgramActive(settings, now)) return 0;
+
+  return items.reduce(
+    (total, item) =>
+      total +
+      getProductPointValue(item.product.id, settings) *
+        Math.max(0, Math.floor(item.qty)),
+    0
+  );
+};
+
+/** Konversi poin yang ditukar menjadi potongan Rupiah. */
+export const getPointDiscountAmount = (
+  points: number,
+  settings: PointSettings
+): number =>
+  Math.max(0, Math.floor(points)) *
+  Math.max(0, Math.floor(settings.redeemValue || 0));
+
+/** Poin maksimal yang boleh ditukar pada nilai tagihan tertentu. */
+export const getMaxRedeemablePoints = (
+  availablePoints: number,
+  payableAmount: number,
+  settings: PointSettings,
+  now: Date = new Date()
+): number => {
+  if (!isPointProgramActive(settings, now)) return 0;
+
+  const value = Math.max(0, Math.floor(settings.redeemValue || 0));
+  const available = Math.max(0, Math.floor(availablePoints || 0));
+  const minPoints = Math.max(0, Math.floor(settings.minRedeemPoints || 0));
+
+  if (value <= 0 || available <= 0) return 0;
+
+  const byAmount = Math.floor(Math.max(0, payableAmount) / value);
+  const maxPoints = Math.min(available, byAmount);
+
+  // Tukar poin harus memenuhi minimal poin.
+  return maxPoints < minPoints ? 0 : maxPoints;
+};
+
 export interface Customer {
   id: string;
   code: string;
@@ -409,6 +514,9 @@ export interface Transaction {
   status: 'LUNAS' | 'PIUTANG' | 'BATAL' | 'RETUR';
   shiftId: string;
   notes?: string;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  pointDiscount?: number;
 }
 
 export interface HeldTransaction {

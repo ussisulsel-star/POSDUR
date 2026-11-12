@@ -1,6 +1,7 @@
 import {
   BadgeCheck,
   Boxes,
+  Coins,
   FolderTree,
   Package,
   Smartphone,
@@ -31,7 +32,8 @@ export type MasterTab =
   | 'users'
   | 'emoney'
   | 'customers'
-  | 'members';
+  | 'members'
+  | 'points';
 
 export interface MasterTabMeta {
   id: MasterTab;
@@ -105,6 +107,13 @@ export const MASTER_TABS: MasterTabMeta[] = [
     icon: BadgeCheck,
     accent: 'text-orange-400',
   },
+  {
+    id: 'points',
+    label: 'Master Point & Tukar Poin',
+    shortLabel: 'Master Point',
+    icon: Coins,
+    accent: 'text-lime-400',
+  },
 ];
 
 export function isMasterTabAllowed(
@@ -119,6 +128,7 @@ export function isMasterTabAllowed(
     case 'emoney':
     case 'customers':
     case 'members':
+    case 'points':
       return isAdmin(user) || isSupervisor(user);
     default:
       return true;

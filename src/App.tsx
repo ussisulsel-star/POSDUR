@@ -12,7 +12,11 @@ import {
   SalesReturn,
   Category,
   EMoney,
-  Brand
+  Brand,
+  PointSettings,
+  calculateEarnedPoints,
+  getMaxRedeemablePoints,
+  getPointDiscountAmount,
 } from './types/pos';
 import { StorageService, playBeep } from './services/storageService';
 import {
@@ -37,6 +41,7 @@ import { PosShortcutStrip } from './components/layout/PosShortcutStrip';
 import { ProductCatalog } from './components/pos/ProductCatalog';
 import { CartPanel } from './components/pos/CartPanel';
 import { PaymentModal } from './components/pos/PaymentModal';
+import { RedeemPointsModal } from './components/pos/RedeemPointsModal';
 import { ReceiptModal } from './components/pos/ReceiptModal';
 import { ShiftModal } from './components/pos/ShiftModal';
 import { HoldOrdersModal } from './components/pos/HoldOrdersModal';
@@ -73,6 +78,7 @@ export default function App() {
   const [brands, setBrands] = useState<Brand[]>(() => StorageService.getBrands());
   const [emoneyList, setEMoneyList] = useState<EMoney[]>(() => StorageService.getEMoney());
   const [customers, setCustomers] = useState<Customer[]>(() => StorageService.getCustomers());
+  const [pointSettings, setPointSettings] = useState<PointSettings>(() => StorageService.getPointSettings());
   const [users, setUsers] = useState<PosUser[]>(() => StorageService.getUsers());
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(() => {
     const list = StorageService.getCustomers();
@@ -110,6 +116,8 @@ export default function App() {
   const [cashMovementModalOpen, setCashMovementModalOpen] = useState<boolean>(false);
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState<boolean>(false);
   const [newCustomerModalOpen, setNewCustomerModalOpen] = useState<boolean>(false);
+  const [redeemModalOpen, setRedeemModalOpen] = useState<boolean>(false);
+  const [redeemPoints, setRedeemPoints] = useState<number>(0);
   const [logoutModalOpen, setLogoutModalOpen] = useState<boolean>(false);
 
   // Barcode input ref for keyboard focus
@@ -336,6 +344,7 @@ export default function App() {
   const handleClearCart = () => {
     setCart([]);
     setInvoiceDiscountPercent(0);
+    setRedeemPoints(0);
     setInvoiceNo(generateInvoiceNo());
   };
 
@@ -396,8 +405,38 @@ export default function App() {
   const subtotalAfterItemDiscounts = rawSubtotal - itemsDiscountTotal;
   const invoiceDiscountAmount = Math.round((subtotalAfterItemDiscounts * invoiceDiscountPercent) / 100);
   const afterInvoiceDiscount = Math.max(0, subtotalAfterItemDiscounts - invoiceDiscountAmount);
-  const taxAmount = taxEnabled ? Math.round(afterInvoiceDiscount * 0.11) : 0;
-  const grandTotal = afterInvoiceDiscount + taxAmount;
+
+  // Tukar poin: dihitung dari tagihan sebelum pajak dan tidak boleh melebihi saldo member.
+  const isMemberCustomer =
+    selectedCustomer.id !== 'cust-umum' && selectedCustomer.tier !== 'UMUM';
+  const maxRedeemablePoints = getMaxRedeemablePoints(
+    selectedCustomer.points,
+    afterInvoiceDiscount,
+    pointSettings
+  );
+  const appliedRedeemPoints = Math.min(
+    Math.max(0, Math.floor(redeemPoints)),
+    maxRedeemablePoints
+  );
+  const pointDiscountAmount = getPointDiscountAmount(
+    appliedRedeemPoints,
+    pointSettings
+  );
+  const afterPointDiscount = Math.max(
+    0,
+    afterInvoiceDiscount - pointDiscountAmount
+  );
+  const taxAmount = taxEnabled ? Math.round(afterPointDiscount * 0.11) : 0;
+  const grandTotal = afterPointDiscount + taxAmount;
+  const estimatedEarnedPoints = isMemberCustomer
+    ? calculateEarnedPoints(cart, pointSettings)
+    : 0;
+
+  useEffect(() => {
+    setRedeemPoints((previous) =>
+      Math.min(Math.max(0, previous), maxRedeemablePoints)
+    );
+  }, [maxRedeemablePoints]);
 
   // Process completed payment
   const handleProcessPayment = (
@@ -406,6 +445,11 @@ export default function App() {
     changeAmount: number,
     shouldPrint: boolean
   ) => {
+    const pointNote =
+      appliedRedeemPoints > 0
+        ? ` · Tukar ${appliedRedeemPoints} poin (-${pointDiscountAmount})`
+        : '';
+
     const newTx: Transaction = {
       id: 'tx-' + Date.now(),
       invoiceNo,
@@ -423,7 +467,8 @@ export default function App() {
       itemCount: cart.length,
       totalQty: cart.reduce((s, i) => s + i.qty, 0),
       subtotal: rawSubtotal,
-      discountTotal: itemsDiscountTotal + invoiceDiscountAmount,
+      discountTotal:
+        itemsDiscountTotal + invoiceDiscountAmount + pointDiscountAmount,
       taxTotal: taxAmount,
       grandTotal,
       payAmount,
@@ -431,7 +476,10 @@ export default function App() {
       payments,
       status: payments.some((p) => p.method === 'PIUTANG') ? 'PIUTANG' : 'LUNAS',
       shiftId: activeShift ? activeShift.id : 'no-shift',
-      notes: `Lunas via ${payments.map((p) => p.method).join(', ')} [${activeOutlet.code}]`,
+      notes: `Lunas via ${payments.map((p) => p.method).join(', ')} [${activeOutlet.code}]${pointNote}`,
+      pointsEarned: estimatedEarnedPoints,
+      pointsRedeemed: appliedRedeemPoints,
+      pointDiscount: pointDiscountAmount,
     };
 
     // Save transaction, update stock, shift stats, and customer loyalty
@@ -522,9 +570,11 @@ export default function App() {
     setCategories(StorageService.getCategories());
     setBrands(StorageService.getBrands());
     setCustomers(StorageService.getCustomers());
+    setPointSettings(StorageService.getPointSettings());
     setUsers(StorageService.getUsers());
     setEMoneyList(StorageService.getEMoney());
     setCart([]);
+    setRedeemPoints(0);
     setTransactions([]);
     setHeldOrders([]);
     setActiveShift(StorageService.getActiveShift());
@@ -743,6 +793,11 @@ export default function App() {
                   setTaxEnabled={setTaxEnabled}
                   onOpenNewCustomerModal={() => setNewCustomerModalOpen(true)}
                   canDiscount={canDiscount(user)}
+                  pointDiscountAmount={pointDiscountAmount}
+                  redeemedPoints={appliedRedeemPoints}
+                  estimatedEarnedPoints={estimatedEarnedPoints}
+                  maxRedeemablePoints={maxRedeemablePoints}
+                  onOpenRedeemPoints={() => setRedeemModalOpen(true)}
                 />
               </div>
             </div>
@@ -762,6 +817,11 @@ export default function App() {
               brands={brands}
               masterTab={masterTab}
               onMasterTabChange={setMasterTab}
+              pointSettings={pointSettings}
+              onUpdatePointSettings={(settings) => {
+                const saved = StorageService.savePointSettings(settings);
+                setPointSettings(saved);
+              }}
               onUpdateProducts={(prods) => {
                 StorageService.saveProducts(prods);
                 setProducts(prods);
@@ -836,6 +896,17 @@ export default function App() {
         customer={selectedCustomer}
         emoneyList={emoneyList}
         onProcessPayment={handleProcessPayment}
+      />
+
+      {/* 1b. Redeem Points Modal (Tukar Poin di Kasir) */}
+      <RedeemPointsModal
+        isOpen={redeemModalOpen}
+        onClose={() => setRedeemModalOpen(false)}
+        customer={selectedCustomer}
+        settings={pointSettings}
+        payableAmount={afterInvoiceDiscount}
+        appliedPoints={appliedRedeemPoints}
+        onApply={setRedeemPoints}
       />
 
       {/* 2. Receipt Modal (Printable) */}
