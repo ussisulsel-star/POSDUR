@@ -154,6 +154,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const ActiveSubTabIcon = activeSubTabMeta.icon;
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedBrandFilter, setSelectedBrandFilter] = useState<string>('all');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
+  const [selectedPointFilter, setSelectedPointFilter] = useState<'all' | 'with' | 'without'>('all');
 
   // Kewenangan per bagian master data
   const canEditProductsSection = canEditProducts(currentUser);
@@ -259,9 +261,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const packageProducts = products.filter((p) => p.isPackage);
   const regularProducts = products.filter((p) => !p.isPackage);
 
-  // Filter products (regular or all) with Brand filter support
+  // Opsi filter kategori diambil dari produk yang terdaftar.
+  const productCategoryOptions = Array.from(
+    new Set(products.map((product) => product.categoryName))
+  )
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  // Filter products (regular or all) with brand, category, point, and search support
   const filteredProducts = products.filter((p) => {
-    const matchesBrand = selectedBrandFilter === 'all' || p.brand === selectedBrandFilter;
+    const matchesBrand =
+      selectedBrandFilter === 'all' || p.brand === selectedBrandFilter;
+    const matchesCategory =
+      selectedCategoryFilter === 'all' ||
+      p.categoryName === selectedCategoryFilter;
+
+    const productPoints = getProductPointValue(p.id, pointSettings);
+    const matchesPoint =
+      selectedPointFilter === 'all' ||
+      (selectedPointFilter === 'with' ? productPoints > 0 : productPoints === 0);
+
     const q = searchQuery.toLowerCase();
     const matchesSearch =
       !searchQuery ||
@@ -270,8 +289,21 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       p.barcode.includes(searchQuery) ||
       p.categoryName.toLowerCase().includes(q) ||
       (p.brand && p.brand.toLowerCase().includes(q));
-    return matchesBrand && matchesSearch;
+    return matchesBrand && matchesCategory && matchesPoint && matchesSearch;
   });
+
+  const hasActiveProductFilter =
+    searchQuery.trim() !== '' ||
+    selectedBrandFilter !== 'all' ||
+    selectedCategoryFilter !== 'all' ||
+    selectedPointFilter !== 'all';
+
+  const resetProductFilters = () => {
+    setSearchQuery('');
+    setSelectedBrandFilter('all');
+    setSelectedCategoryFilter('all');
+    setSelectedPointFilter('all');
+  };
 
   // ---- Datasheet inline editing ----
   const productDirtyCount = Object.keys(productDatasheetDraft).length;
@@ -1076,47 +1108,110 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           {/* SUBTAB 1: PRODUCTS TABLE */}
           {activeSubTab === 'products' && (
             <div className="flex-1 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-xs flex flex-col">
-              {/* Brand Filter Bar for Master Produk */}
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 overflow-x-auto">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 shrink-0">
-                    Filter Brand:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBrandFilter('all')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      selectedBrandFilter === 'all'
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    Semua Brand ({products.length})
-                  </button>
-                  {AVAILABLE_BRANDS.map((b) => {
-                    const cfg = getBrandConfig(b);
-                    const count = products.filter((p) => p.brand === b).length;
-                    const isSelected = selectedBrandFilter === b;
-                    return (
-                      <button
-                        key={b}
-                        type="button"
-                        onClick={() => setSelectedBrandFilter(b)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
-                          isSelected
-                            ? `${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder} shadow-xs ring-2 ring-offset-1 ring-blue-500 font-extrabold`
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        <span>{cfg.emoji}</span>
-                        <span>{b}</span>
-                        <span className="text-[10px] opacity-75 font-mono">({count})</span>
-                      </button>
-                    );
-                  })}
+              {/* Filter Bar for Master Produk */}
+              <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3 overflow-x-auto">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 shrink-0">
+                      Filter Brand:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBrandFilter('all')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        selectedBrandFilter === 'all'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      Semua Brand ({products.length})
+                    </button>
+                    {AVAILABLE_BRANDS.map((b) => {
+                      const cfg = getBrandConfig(b);
+                      const count = products.filter((p) => p.brand === b).length;
+                      const isSelected = selectedBrandFilter === b;
+                      return (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => setSelectedBrandFilter(b)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 border ${
+                            isSelected
+                              ? `${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder} shadow-xs ring-2 ring-offset-1 ring-blue-500 font-extrabold`
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{cfg.emoji}</span>
+                          <span>{b}</span>
+                          <span className="text-[10px] opacity-75 font-mono">({count})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="text-[11px] text-slate-500 whitespace-nowrap shrink-0 hidden md:block">
+                    Menampilkan <strong>{filteredProducts.length}</strong>
+                    {hasActiveProductFilter && (
+                      <> dari <strong>{products.length}</strong></>
+                    )}{' '}
+                    produk
+                  </div>
                 </div>
-                <div className="text-[11px] text-slate-500 whitespace-nowrap shrink-0 hidden md:block">
-                  Menampilkan <strong>{filteredProducts.length}</strong> produk
+
+                <div className="flex flex-wrap items-center gap-2 border-t border-slate-200 pt-2">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Filter Kategori:
+                  </span>
+                  <select
+                    value={selectedCategoryFilter}
+                    onChange={(event) =>
+                      setSelectedCategoryFilter(event.target.value)
+                    }
+                    className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-blue-400 focus:outline-none"
+                    title="Filter berdasarkan kategori produk"
+                  >
+                    <option value="all">Semua Kategori</option>
+                    {productCategoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="ml-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Filter Poin:
+                  </span>
+                  {(
+                    [
+                      { value: 'all', label: 'Semua' },
+                      { value: 'with', label: 'Ada Poin' },
+                      { value: 'without', label: 'Tanpa Poin' },
+                    ] as const
+                  ).map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSelectedPointFilter(option.value)}
+                      className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                        selectedPointFilter === option.value
+                          ? 'border-amber-500 bg-amber-500 text-white shadow-xs'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                      }`}
+                      title={`Tampilkan produk ${option.label.toLowerCase()}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+
+                  {hasActiveProductFilter && (
+                    <button
+                      type="button"
+                      onClick={resetProductFilters}
+                      className="ml-auto rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700 transition-colors hover:bg-rose-100"
+                      title="Hapus pencarian dan semua filter produk"
+                    >
+                      Reset Filter
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1200,6 +1295,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
+                    {filteredProducts.length === 0 && (
+                      <tr>
+                        <td colSpan={10} className="px-4 py-12 text-center">
+                          <p className="text-sm font-semibold text-slate-700">
+                            Tidak ada produk yang cocok dengan filter.
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Ubah kata kunci atau reset filter untuk menampilkan
+                            semua produk.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={resetProductFilters}
+                            className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100"
+                          >
+                            Reset Filter
+                          </button>
+                        </td>
+                      </tr>
+                    )}
                     {filteredProducts.map((p) => {
                       const brandCfg = getBrandConfig(p.brand);
                       const draftProduct = {
