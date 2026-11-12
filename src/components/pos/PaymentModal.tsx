@@ -325,7 +325,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5">
               <div className="text-center">
                 <span className="font-bold text-sm text-slate-900 block">QRIS & E-Money Standar Nasional</span>
-                <span className="text-xs text-slate-500 font-mono">NMID: ID1020009999901 · Toko Berkah POS</span>
+                <span className="text-xs text-slate-500 font-mono">NMID: ID1020009999901 · DEL USAHA RASA GRUP POS</span>
               </div>
 
               {/* E-Money Channel Picker */}
@@ -460,9 +460,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           {method === 'TRANSFER' && (
             <div className="space-y-3 bg-slate-50 p-4 border border-slate-200 rounded-xl text-xs">
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-900 space-y-1">
-                <span className="font-bold block">Rekening Resmi Toko Berkah:</span>
-                <div>BCA: <strong className="font-mono">8830-1928-10</strong> a.n Toko Berkah Sejahtera</div>
-                <div>Mandiri: <strong className="font-mono">137-00-1928-301</strong> a.n Toko Berkah Sejahtera</div>
+                <span className="font-bold block">Rekening Resmi DEL USAHA RASA GRUP:</span>
+                <div>BCA: <strong className="font-mono">8830-1928-10</strong> a.n DEL USAHA RASA GRUP</div>
+                <div>Mandiri: <strong className="font-mono">137-00-1928-301</strong> a.n DEL USAHA RASA GRUP</div>
               </div>
 
               <div>

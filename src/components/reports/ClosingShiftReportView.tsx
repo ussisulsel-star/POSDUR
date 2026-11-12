@@ -81,7 +81,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
       id: 'demo-shift',
       shiftNumber: 1,
       outletId: outlets[0]?.id || 'out-001',
-      outletName: outlets[0]?.name || 'Toko Berkah Kelapa Gading (Pusat & HQ)',
+      outletName: outlets[0]?.name || 'DEL USAHA RASA GRUP (Pusat & HQ)',
       cashierId: currentUser?.userId || 'ADMIN',
       cashierName: currentUser?.name || 'ADMINISTRATOR',
       companyId: '99999',
@@ -384,7 +384,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
             </label>
             <div className="p-2 bg-white border border-slate-200 rounded-lg font-semibold text-slate-800 truncate flex items-center gap-1.5">
               <Store className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>{currentShift.outletName || outlets[0]?.name || 'Toko Berkah Pusat'}</span>
+              <span>{currentShift.outletName || outlets[0]?.name || 'DEL USAHA RASA GRUP Pusat'}</span>
             </div>
           </div>
 
@@ -880,7 +880,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
               {/* Kop Surat Berita Acara */}
               <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1">
                 <h1 className="text-lg font-black tracking-wide uppercase">
-                  TOKO BERKAH SEJAHTERA INDONESIA
+                  DEL USAHA RASA GRUP INDONESIA
                 </h1>
                 <p className="text-xs font-semibold text-slate-700">
                   {currentShift.outletName || outlets[0]?.name || 'Cabang Kelapa Gading (Pusat & HQ)'}

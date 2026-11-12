@@ -54,7 +54,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             {/* Store Header */}
             <div className="text-center pb-2 border-b border-dashed border-slate-400 space-y-0.5">
               <div className="font-extrabold text-xs uppercase tracking-wider">
-                TOKO BERKAH SEJAHTERA
+                DEL USAHA RASA GRUP
               </div>
               <div className="text-[10px] text-slate-600">
                 ID Perusahaan: 99999 · Cabang Utama

@@ -121,7 +121,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
             <Building2 className="w-3.5 h-3.5 text-blue-400" />
             <span className="font-semibold text-white">ID: {user.companyId || '99999'}</span>
             <span className="text-slate-500">|</span>
-            <span className="text-slate-300">Toko Berkah Sejahtera</span>
+            <span className="text-slate-300">DEL USAHA RASA GRUP</span>
           </div>
 
           {/* Active Outlet Dropdown / Permission-Restricted Branch Selector */}

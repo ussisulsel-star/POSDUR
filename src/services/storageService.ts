@@ -83,11 +83,11 @@ const normalizePointSettings = (
 };
 
 const DEFAULT_SETTINGS: StoreSettings = {  companyId: '99999',
-  storeName: 'TOKO BERKAH SEJAHTERA',
+  storeName: 'DEL USAHA RASA GRUP',
   branchName: 'Cabang Utama - Jakarta',
   address: 'Jl. Boulevard Raya Blok A2 No. 10, Kelapa Gading',
   phone: '(021) 4589-1234 / 0812-9999-9999',
-  receiptHeader: 'Selamat Datang di Toko Berkah',
+  receiptHeader: 'Selamat Datang di DEL USAHA RASA GRUP',
   receiptFooter: 'Barang yang sudah dibeli tidak dapat ditukar/dikembalikan.\nTerima Kasih Atas Kunjungan Anda!',
   taxEnabled: false,
   taxRate: 11,
@@ -854,7 +854,7 @@ export const StorageService = {
           changed = true;
         }
         if (!outletName) {
-          outletName = 'Toko Berkah Kelapa Gading (Pusat & HQ)';
+          outletName = 'DEL USAHA RASA GRUP (Pusat & HQ)';
           changed = true;
         }
         const payments = (t.payments || []).map((p) => {

@@ -445,7 +445,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                                     >
                                       <Store className="w-2.5 h-2.5 text-amber-600 shrink-0" />
                                       <span className="truncate max-w-[120px]">
-                                        {o ? o.name.replace(/^Toko Berkah\s+/, '') : oId}
+                                        {o ? o.name.replace(/^(Toko Berkah|DEL USAHA RASA GRUP)\s+/, '') : oId}
                                       </span>
                                     </span>
                                   );

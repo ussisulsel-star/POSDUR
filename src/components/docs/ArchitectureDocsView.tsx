@@ -811,13 +811,13 @@ const SQL_SEED_SCRIPT = `-- ====================================================
 INSERT INTO companies (id, name, branch_name, phone, address, tax_enabled, tax_rate, receipt_header, receipt_footer)
 VALUES (
     '99999',
-    'TOKO BERKAH SEJAHTERA',
+    'DEL USAHA RASA GRUP',
     'Cabang Utama Jakarta',
     '(021) 4589-1234',
     'Jl. Boulevard Raya Blok A2 No. 10, Kelapa Gading',
     FALSE,
     11.00,
-    'Selamat Datang di Toko Berkah',
+    'Selamat Datang di DEL USAHA RASA GRUP',
     'Barang yang sudah dibeli tidak dapat ditukar/dikembalikan.\\nTerima Kasih Atas Kunjungan Anda!'
 ) ON CONFLICT (id) DO NOTHING;
 

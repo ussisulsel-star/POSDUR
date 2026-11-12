@@ -78,7 +78,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           ID: {user.companyId || '99999'}
         </span>
         <span className="text-slate-500">|</span>
-        <span>Toko Berkah Sejahtera</span>
+        <span>DEL USAHA RASA GRUP</span>
       </div>
 
       {permittedOutlets.length === 0 ? (

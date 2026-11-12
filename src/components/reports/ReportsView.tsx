@@ -1017,7 +1017,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                             {/* Outlet */}
                             <td className="py-2.5 px-3 font-medium text-slate-700">
                               {t.outletName
-                                ? t.outletName.replace(/^Toko Berkah\s+/, '') || t.outletName
+                                ? t.outletName.replace(/^(Toko Berkah|DEL USAHA RASA GRUP)\s+/, '') || t.outletName
                                 : 'Cabang Utama'}
                             </td>
 
@@ -1530,7 +1530,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                             {/* Outlet */}
                             <td className="py-2.5 px-3 font-medium text-slate-700">
                               {t.outletName
-                                ? t.outletName.replace(/^Toko Berkah\s+/, '') || t.outletName
+                                ? t.outletName.replace(/^(Toko Berkah|DEL USAHA RASA GRUP)\s+/, '') || t.outletName
                                 : 'Cabang Utama'}
                             </td>
 
@@ -2189,7 +2189,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               {/* Kop Surat Dokumen Konsolidasi */}
               <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1">
                 <h1 className="text-lg font-black tracking-wide uppercase">
-                  TOKO BERKAH SEJAHTERA INDONESIA
+                  DEL USAHA RASA GRUP INDONESIA
                 </h1>
                 <p className="text-xs font-semibold text-slate-700">
                   KANTOR PUSAT & MANAGEMENT MULTI-OUTLET NASIONAL
@@ -2392,7 +2392,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                     </div>
                     <div className="border-t border-slate-400 pt-1.5 mx-4">
                       <p className="font-bold text-slate-900">H. Hendra Pratama, M.M.</p>
-                      <p className="text-[10px] text-slate-500 font-mono">Direksi Toko Berkah Sejahtera</p>
+                      <p className="text-[10px] text-slate-500 font-mono">Direksi DEL USAHA RASA GRUP</p>
                     </div>
                   </div>
                 </div>
