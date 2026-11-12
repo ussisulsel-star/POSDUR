@@ -54,6 +54,7 @@ import { UserManagementView } from '../users/UserManagementView';
 import { ExcelProductUploadModal } from './ExcelProductUploadModal';
 import { PackageProductModal } from './PackageProductModal';
 import { MasterBrandView } from './MasterBrandView';
+import { MasterMemberView } from './MasterMemberView';
 import {
   MASTER_TABS,
   getAllowedMasterTabs,
@@ -584,6 +585,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 ? users.length
                 : activeSubTab === 'emoney'
                 ? emoneyList.length
+                : activeSubTab === 'members'
+                ? customers.filter((customer) => customer.tier !== 'UMUM').length
                 : customers.length}
             </span>
           </span>
@@ -644,8 +647,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         </div>
       )}
 
+      {/* 3b. MASTER MEMBER & LOYALITAS */}
+      {activeSubTab === 'members' && (
+        <MasterMemberView
+          customers={customers}
+          currentUser={currentUser}
+          onUpdateCustomers={onUpdateCustomers}
+        />
+      )}
+
       {/* 4. MASTER PRODUK, KATEGORI, E-MONEY, DAN PELANGGAN */}
       {activeSubTab !== 'brands' &&
+        activeSubTab !== 'members' &&
         activeSubTab !== 'outlets' &&
         activeSubTab !== 'users' &&
         (activeSubTab !== 'emoney' || canViewEMoneySection) &&

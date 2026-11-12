@@ -1,4 +1,5 @@
 import {
+  BadgeCheck,
   Boxes,
   FolderTree,
   Package,
@@ -29,7 +30,8 @@ export type MasterTab =
   | 'outlets'
   | 'users'
   | 'emoney'
-  | 'customers';
+  | 'customers'
+  | 'members';
 
 export interface MasterTabMeta {
   id: MasterTab;
@@ -96,6 +98,13 @@ export const MASTER_TABS: MasterTabMeta[] = [
     icon: Users,
     accent: 'text-rose-400',
   },
+  {
+    id: 'members',
+    label: 'Master Member & Loyalitas',
+    shortLabel: 'Master Member',
+    icon: BadgeCheck,
+    accent: 'text-orange-400',
+  },
 ];
 
 export function isMasterTabAllowed(
@@ -109,6 +118,7 @@ export function isMasterTabAllowed(
       return canManageUsers(user);
     case 'emoney':
     case 'customers':
+    case 'members':
       return isAdmin(user) || isSupervisor(user);
     default:
       return true;
