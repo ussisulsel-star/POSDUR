@@ -20,7 +20,9 @@ import {
   UserPlus,
   FileSpreadsheet,
   Building2,
-  Download
+  Download,
+  Coins,
+  Undo2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
@@ -63,6 +65,28 @@ import {
   getAllowedMasterTabs,
   type MasterTab,
 } from './masterTabs';
+
+/**
+ * Kolom yang bisa dikoreksi langsung pada mode datasheet Master Produk.
+ * Poin disimpan terpisah di PointSettings, jadi tidak termasuk di sini.
+ */
+const PRODUCT_DATASHEET_FIELDS: Array<keyof Product> = [
+  'name',
+  'barcode',
+  'brand',
+  'categoryId',
+  'categoryName',
+  'unit',
+  'costPrice',
+  'sellPrice',
+  'sellPriceMall',
+];
+
+const normalizeProductField = (product: Product, field: keyof Product) => {
+  if (field === 'brand') return product.brand || 'Del Mango';
+  if (field === 'sellPriceMall') return product.sellPriceMall || product.sellPrice;
+  return product[field];
+};
 
 interface MasterDataViewProps {
   products: Product[];
@@ -141,6 +165,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const canResetSection = canResetDatabase(currentUser);
   const canViewEMoneySection = isAdmin(currentUser) || isSupervisor(currentUser);
   const canViewCustomersSection = isAdmin(currentUser) || isSupervisor(currentUser);
+  const canEditPointValuesSection = isAdmin(currentUser);
   const memberTierConfigs = StorageService.getMemberTiers();
 
   // Pastikan subtab aktif selalu diizinkan untuk user saat ini (fail-closed).
@@ -162,7 +187,16 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   // Product modals state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState<boolean>(false);
+  const [editingProductPoints, setEditingProductPoints] = useState<number>(0);
   const [excelUploadModalOpen, setExcelUploadModalOpen] = useState<boolean>(false);
+
+  // Datasheet inline editing state (hanya menyimpan baris yang berubah)
+  const [productDatasheetDraft, setProductDatasheetDraft] = useState<
+    Record<string, Partial<Product>>
+  >({});
+  const [pointDatasheetDraft, setPointDatasheetDraft] = useState<
+    Record<string, number>
+  >({});
 
   // Package products state
   const [editingPackageProduct, setEditingPackageProduct] = useState<Product | null>(null);
@@ -182,6 +216,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         barcode: p.barcode,
         satuan: p.unit,
         stok: p.stock || 0,
+        poin: getProductPointValue(p.id, pointSettings),
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);
       ws['!cols'] = [
@@ -193,6 +228,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         { wch: 18 },
         { wch: 16 },
         { wch: 18 },
+        { wch: 10 },
         { wch: 10 },
         { wch: 10 },
       ];
@@ -236,6 +272,166 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       (p.brand && p.brand.toLowerCase().includes(q));
     return matchesBrand && matchesSearch;
   });
+
+  // ---- Datasheet inline editing ----
+  const productDirtyCount = Object.keys(productDatasheetDraft).length;
+  const pointDirtyCount = Object.keys(pointDatasheetDraft).length;
+  const datasheetDirtyCount = productDirtyCount + pointDirtyCount;
+
+  // Buang draft yang produknya sudah tidak ada (mis. dihapus lewat modal).
+  useEffect(() => {
+    const productIds = new Set(products.map((p) => p.id));
+    const prune = (draft: Record<string, unknown>) => {
+      const entries = Object.entries(draft).filter(([id]) => productIds.has(id));
+      return entries.length === Object.keys(draft).length
+        ? draft
+        : Object.fromEntries(entries);
+    };
+    setProductDatasheetDraft((previous) => prune(previous) as Record<string, Partial<Product>>);
+    setPointDatasheetDraft((previous) => prune(previous) as Record<string, number>);
+  }, [products]);
+
+  const updateProductDatasheetField = (
+    base: Product,
+    patch: Partial<Product>
+  ) => {
+    if (!canEditProductsSection) return;
+    setProductDatasheetDraft((previous) => {
+      const combined = { ...(previous[base.id] ?? {}), ...patch };
+      const effective = { ...base, ...combined };
+      const cleaned: Partial<Product> = {};
+
+      PRODUCT_DATASHEET_FIELDS.forEach((field) => {
+        if (
+          normalizeProductField(effective, field) !==
+          normalizeProductField(base, field)
+        ) {
+          (cleaned as Record<string, unknown>)[field] = effective[field];
+        }
+      });
+
+      const copy = { ...previous };
+      if (Object.keys(cleaned).length > 0) {
+        copy[base.id] = cleaned;
+      } else {
+        delete copy[base.id];
+      }
+      return copy;
+    });
+  };
+
+  const updatePointDatasheetValue = (productId: string, value: number) => {
+    if (!canEditPointValuesSection) return;
+    const original = getProductPointValue(productId, pointSettings);
+    const nextValue = Math.max(0, Math.floor(Number(value) || 0));
+    setPointDatasheetDraft((previous) => {
+      if (nextValue === original) {
+        if (!(productId in previous)) return previous;
+        const copy = { ...previous };
+        delete copy[productId];
+        return copy;
+      }
+      return { ...previous, [productId]: nextValue };
+    });
+  };
+
+  const handleResetProductDatasheet = () => {
+    if (datasheetDirtyCount === 0) return;
+    if (!confirm('Batalkan semua koreksi datasheet yang belum disimpan?')) return;
+    setProductDatasheetDraft({});
+    setPointDatasheetDraft({});
+    playBeep('scan');
+  };
+
+  const handleSaveProductDatasheet = () => {
+    if (datasheetDirtyCount === 0) return;
+
+    if (productDirtyCount > 0 && !canEditProductsSection) {
+      denyEdit('mengoreksi data produk');
+      return;
+    }
+    if (pointDirtyCount > 0 && !canEditPointValuesSection) {
+      denyEdit('mengoreksi poin produk');
+      return;
+    }
+
+    const changedProducts = Object.entries(productDatasheetDraft)
+      .map(([productId, patch]) => {
+        const base = products.find((product) => product.id === productId);
+        return base ? { ...base, ...patch } : null;
+      })
+      .filter((product): product is Product => product !== null);
+    for (const draft of changedProducts) {
+      if (!draft.name.trim()) {
+        playBeep('error');
+        alert('Nama produk tidak boleh kosong. Periksa kembali koreksi Anda.');
+        return;
+      }
+      if (!draft.barcode.trim()) {
+        playBeep('error');
+        alert(`Barcode produk "${draft.name}" tidak boleh kosong.`);
+        return;
+      }
+      if (!draft.unit.trim()) {
+        playBeep('error');
+        alert(`Satuan produk "${draft.name}" tidak boleh kosong.`);
+        return;
+      }
+      if (draft.sellPrice <= 0) {
+        playBeep('error');
+        alert(`Harga jual outlet "${draft.name}" harus lebih besar dari 0.`);
+        return;
+      }
+      if (
+        draft.costPrice < 0 ||
+        (draft.sellPriceMall ?? 0) < 0
+      ) {
+        playBeep('error');
+        alert(`Harga produk "${draft.name}" tidak boleh negatif.`);
+        return;
+      }
+    }
+
+    if (productDirtyCount > 0) {
+      const updated = products.map((product) =>
+        productDatasheetDraft[product.id]
+          ? { ...product, ...productDatasheetDraft[product.id] }
+          : product
+      );
+      onUpdateProducts(updated);
+    }
+
+    if (pointDirtyCount > 0) {
+      const productPoints = { ...(pointSettings.productPoints || {}) };
+      Object.entries(pointDatasheetDraft).forEach(([productId, points]) => {
+        if (points > 0) {
+          productPoints[productId] = points;
+        } else {
+          delete productPoints[productId];
+        }
+      });
+      onUpdatePointSettings({ ...pointSettings, productPoints });
+    }
+
+    setProductDatasheetDraft({});
+    setPointDatasheetDraft({});
+    playBeep('success');
+    alert(
+      `Koreksi datasheet berhasil disimpan.\n\n` +
+      `• Produk dikoreksi: ${productDirtyCount}\n` +
+      `• Poin produk dikoreksi: ${pointDirtyCount}`
+    );
+  };
+
+  const isProductFieldDirty = (product: Product, field: keyof Product) => {
+    const patch = productDatasheetDraft[product.id];
+    if (!patch || !(field in patch)) return false;
+    const effective = { ...product, ...patch };
+    return (
+      normalizeProductField(effective, field) !==
+      normalizeProductField(product, field)
+    );
+  };
 
   // Filter package products
   const filteredPackages = packageProducts.filter(
@@ -321,8 +517,20 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       alert('Perubahan data produk berhasil disimpan!');
     }
 
+    if (isAdmin(currentUser)) {
+      const points = Math.max(0, Math.floor(Number(editingProductPoints) || 0));
+      const productPoints = { ...(pointSettings.productPoints || {}) };
+      if (points > 0) {
+        productPoints[editingProduct.id] = points;
+      } else {
+        delete productPoints[editingProduct.id];
+      }
+      onUpdatePointSettings({ ...pointSettings, productPoints });
+    }
+
     setEditingProduct(null);
     setIsAddingProduct(false);
+    setEditingProductPoints(0);
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -782,6 +990,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       };
                       setEditingProduct(newP);
                       setIsAddingProduct(true);
+                      setEditingProductPoints(0);
                     }}
                     className="flex items-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
                   >
@@ -911,7 +1120,68 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
+              {/* Datasheet Edit Bar */}
+              <div
+                className={`px-4 py-2.5 border-b flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between ${
+                  datasheetDirtyCount > 0
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-white border-slate-200'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
+                      datasheetDirtyCount > 0
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-slate-100 text-slate-500'
+                    }`}
+                  >
+                    <Coins className="h-3.5 w-3.5" />
+                  </span>
+                  <div>
+                    <p className="text-[11px] font-bold text-slate-800">
+                      Mode Datasheet — koreksi langsung di tabel
+                    </p>
+                    <p className="text-[11px] text-slate-500">
+                      {canEditProductsSection
+                        ? `Klik sel nama, brand, kategori, satuan, harga, atau poin lalu simpan sekali untuk semua koreksi.${
+                            canEditPointValuesSection
+                              ? ''
+                              : ' Kolom poin hanya dapat diubah oleh admin.'
+                          }`
+                        : 'Akun Anda hanya dapat melihat data produk.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {datasheetDirtyCount > 0 && (
+                    <span className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-700">
+                      {datasheetDirtyCount} koreksi belum disimpan
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleResetProductDatasheet}
+                    disabled={datasheetDirtyCount === 0}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                    <span>Batalkan</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveProductDatasheet}
+                    disabled={datasheetDirtyCount === 0}
+                    className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-xs transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    <span>Simpan Semua Koreksi</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-700 sticky top-0 border-b border-slate-200">
                     <tr>
@@ -923,46 +1193,282 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       <th className="py-2.5 px-3 font-semibold text-right">Harga Pokok</th>
                       <th className="py-2.5 px-3 font-semibold text-right text-blue-700">Harga Outlet</th>
                       <th className="py-2.5 px-3 font-semibold text-right text-amber-700">Harga Mall</th>
+                      <th className="py-2.5 px-3 font-semibold text-center text-amber-700" title="Poin yang didapat per 1 unit produk terjual">
+                        Poin / Unit
+                      </th>
                       <th className="py-2.5 px-3 font-semibold text-center w-24">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredProducts.map((p) => {
                       const brandCfg = getBrandConfig(p.brand);
+                      const draftProduct = {
+                        ...p,
+                        ...(productDatasheetDraft[p.id] ?? {}),
+                      };
+                      const pointValue =
+                        pointDatasheetDraft[p.id] ??
+                        getProductPointValue(p.id, pointSettings);
+                      const isPointDirty = pointDatasheetDraft[p.id] !== undefined;
                       return (
-                        <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                        <tr
+                          key={p.id}
+                          className={`transition-colors ${
+                            productDatasheetDraft[p.id] || isPointDirty
+                              ? 'bg-amber-50/40'
+                              : 'hover:bg-slate-50'
+                          }`}
+                        >
                           <td className="py-2.5 px-4 font-mono">
                             <div className="font-bold text-slate-900">{p.code}</div>
                             <div className="text-[10px] text-slate-400">{p.barcode}</div>
                           </td>
-                          <td className="py-2.5 px-3 font-semibold text-slate-800">
-                            {p.name}
+                          <td className="py-2.5 px-3">
+                            {canEditProductsSection ? (
+                              <input
+                                type="text"
+                                value={draftProduct.name}
+                                onChange={(event) =>
+                                  updateProductDatasheetField(p, {
+                                    name: event.target.value,
+                                  })
+                                }
+                                className={`w-52 rounded-md border px-2 py-1 text-[11px] font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'name')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Nama produk ${p.code}`}
+                              />
+                            ) : (
+                              <span className="font-semibold text-slate-800">
+                                {p.name}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3">
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs whitespace-nowrap ${brandCfg.badgeBg} ${brandCfg.badgeText} ${brandCfg.badgeBorder}`}>
-                              <span>{brandCfg.emoji}</span>
-                              <span>{p.brand || 'Del Mango'}</span>
-                            </span>
+                            {canEditProductsSection ? (
+                              <select
+                                value={draftProduct.brand || 'Del Mango'}
+                                onChange={(event) =>
+                                  updateProductDatasheetField(p, {
+                                    brand: event.target.value as BrandName,
+                                  })
+                                }
+                                className={`w-36 rounded-md border px-1.5 py-1 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'brand')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Brand produk ${p.code}`}
+                              >
+                                {AVAILABLE_BRANDS.map((brand) => (
+                                  <option key={brand} value={brand}>
+                                    {brand}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span
+                                className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border shadow-2xs whitespace-nowrap ${brandCfg.badgeBg} ${brandCfg.badgeText} ${brandCfg.badgeBorder}`}
+                              >
+                                <span>{brandCfg.emoji}</span>
+                                <span>{p.brand || 'Del Mango'}</span>
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3">
-                            <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium border border-blue-100">
-                              <Tag className="w-2.5 h-2.5" />
-                              {p.categoryName}
-                            </span>
+                            {canEditProductsSection ? (
+                              <select
+                                value={draftProduct.categoryId}
+                                onChange={(event) => {
+                                  const nextCategory = categories.find(
+                                    (category) =>
+                                      category.id === event.target.value
+                                  );
+                                  updateProductDatasheetField(p, {
+                                    categoryId: event.target.value,
+                                    categoryName:
+                                      nextCategory?.name ??
+                                      draftProduct.categoryName,
+                                  });
+                                }}
+                                className={`w-36 rounded-md border px-1.5 py-1 text-[11px] font-semibold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'categoryId')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Kategori produk ${p.code}`}
+                              >
+                                {!categories.some(
+                                  (category) =>
+                                    category.id === draftProduct.categoryId
+                                ) && (
+                                  <option value={draftProduct.categoryId}>
+                                    {draftProduct.categoryName}
+                                  </option>
+                                )}
+                                {categories
+                                  .filter(
+                                    (category) => category.id !== 'cat-all'
+                                  )
+                                  .map((category) => (
+                                    <option
+                                      key={category.id}
+                                      value={category.id}
+                                    >
+                                      {category.name}
+                                    </option>
+                                  ))}
+                              </select>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-medium border border-blue-100">
+                                <Tag className="w-2.5 h-2.5" />
+                                {p.categoryName}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 text-center">
-                            <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">
-                              {p.unit}
-                            </span>
+                            {canEditProductsSection ? (
+                              <input
+                                type="text"
+                                value={draftProduct.unit}
+                                onChange={(event) =>
+                                  updateProductDatasheetField(p, {
+                                    unit: event.target.value,
+                                  })
+                                }
+                                className={`w-16 rounded-md border px-1.5 py-1 text-center font-mono text-[11px] font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'unit')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Satuan produk ${p.code}`}
+                              />
+                            ) : (
+                              <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">
+                                {p.unit}
+                              </span>
+                            )}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono-numbers text-slate-500">
-                            {formatRupiah(p.costPrice)}
+                          <td className="py-2.5 px-3 text-right">
+                            {canEditProductsSection ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="100"
+                                value={draftProduct.costPrice}
+                                onChange={(event) =>
+                                  updateProductDatasheetField(p, {
+                                    costPrice: Math.max(
+                                      0,
+                                      Number(event.target.value) || 0
+                                    ),
+                                  })
+                                }
+                                className={`w-24 rounded-md border px-1.5 py-1 text-right font-mono-numbers text-[11px] text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'costPrice')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Harga pokok ${p.code}`}
+                              />
+                            ) : (
+                              <span className="font-mono-numbers text-slate-500">
+                                {formatRupiah(p.costPrice)}
+                              </span>
+                            )}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono-numbers font-bold text-blue-700">
-                            {formatRupiah(p.sellPrice)}
+                          <td className="py-2.5 px-3 text-right">
+                            {canEditProductsSection ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="100"
+                                value={draftProduct.sellPrice}
+                                onChange={(event) =>
+                                  updateProductDatasheetField(p, {
+                                    sellPrice: Math.max(
+                                      0,
+                                      Number(event.target.value) || 0
+                                    ),
+                                  })
+                                }
+                                className={`w-24 rounded-md border px-1.5 py-1 text-right font-mono-numbers text-[11px] font-bold text-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'sellPrice')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Harga jual outlet ${p.code}`}
+                              />
+                            ) : (
+                              <span className="font-mono-numbers font-bold text-blue-700">
+                                {formatRupiah(p.sellPrice)}
+                              </span>
+                            )}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono-numbers font-bold text-amber-700">
-                            {formatRupiah(p.sellPriceMall || p.sellPrice)}
+                          <td className="py-2.5 px-3 text-right">
+                            {canEditProductsSection ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="100"
+                                value={
+                                  draftProduct.sellPriceMall ??
+                                  draftProduct.sellPrice
+                                }
+                                onChange={(event) =>
+                                  updateProductDatasheetField(p, {
+                                    sellPriceMall: Math.max(
+                                      0,
+                                      Number(event.target.value) || 0
+                                    ),
+                                  })
+                                }
+                                className={`w-24 rounded-md border px-1.5 py-1 text-right font-mono-numbers text-[11px] font-bold text-amber-700 focus:outline-none focus:ring-1 focus:ring-blue-400 ${
+                                  isProductFieldDirty(p, 'sellPriceMall')
+                                    ? 'border-amber-400 bg-amber-50'
+                                    : 'border-transparent bg-transparent hover:border-slate-300 hover:bg-white'
+                                }`}
+                                aria-label={`Harga jual mall ${p.code}`}
+                              />
+                            ) : (
+                              <span className="font-mono-numbers font-bold text-amber-700">
+                                {formatRupiah(
+                                  p.sellPriceMall || p.sellPrice
+                                )}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            {canEditPointValuesSection ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={pointValue}
+                                onChange={(event) =>
+                                  updatePointDatasheetValue(
+                                    p.id,
+                                    Number(event.target.value)
+                                  )
+                                }
+                                className={`w-16 rounded-md border px-1.5 py-1 text-center font-mono text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                                  isPointDirty
+                                    ? 'border-amber-400 bg-amber-50 text-amber-800'
+                                    : 'border-transparent bg-transparent text-amber-700 hover:border-slate-300 hover:bg-white'
+                                }`}
+                                title="Poin yang didapat per 1 unit produk terjual"
+                                aria-label={`Poin per unit ${p.code}`}
+                              />
+                            ) : (
+                              <span
+                                className="inline-flex min-w-8 items-center justify-center rounded-md bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-700"
+                                title="Poin hanya dapat diubah oleh admin"
+                              >
+                                {pointValue}
+                              </span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 text-center">
                             <div className="flex items-center justify-center gap-1">
@@ -972,6 +1478,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                                 onClick={() => {
                                   setEditingProduct(p);
                                   setIsAddingProduct(false);
+                                  setEditingProductPoints(
+                                    getProductPointValue(p.id, pointSettings)
+                                  );
                                 }}
                                 className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded cursor-pointer"
                                 title="Edit Produk"
@@ -1655,6 +2164,37 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 </div>
               </div>
 
+              <div
+                className={`rounded-xl border p-3 ${
+                  canEditPointValuesSection
+                    ? 'border-amber-200 bg-amber-50/70'
+                    : 'border-slate-200 bg-slate-50'
+                }`}
+              >
+                <label className="mb-1 flex items-center gap-1.5 font-semibold text-amber-900">
+                  <Coins className="h-3.5 w-3.5" />
+                  <span>Poin per Unit (Program Poin)</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={editingProductPoints}
+                  onChange={(e) =>
+                    setEditingProductPoints(
+                      Math.max(0, Math.floor(Number(e.target.value) || 0))
+                    )
+                  }
+                  disabled={!canEditPointValuesSection}
+                  className="w-full max-w-40 p-2 bg-white border border-amber-300 rounded font-mono font-bold text-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                  placeholder="0"
+                />
+                <p className="mt-1 text-[10px] text-amber-700">
+                  Poin yang didapat setiap 1 unit produk terjual. Hanya admin yang
+                  dapat mengubah nilai poin.
+                </p>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
                 <button
                   type="button"
@@ -2213,13 +2753,30 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         onClose={() => setExcelUploadModalOpen(false)}
         existingProducts={products}
         existingCategories={categories}
-        onImportProducts={(newProducts, newCategories) => {
+        canEditPoints={canEditPointValuesSection}
+        onImportProducts={(newProducts, newCategories, pointUpdates) => {
           if (!canEditProductsSection) {
             denyEdit('mengimpor produk dari Excel');
             return;
           }
           onUpdateCategories(newCategories);
           onUpdateProducts(newProducts);
+
+          if (
+            pointUpdates &&
+            Object.keys(pointUpdates).length > 0 &&
+            canEditPointValuesSection
+          ) {
+            const productPoints = { ...(pointSettings.productPoints || {}) };
+            Object.entries(pointUpdates).forEach(([productId, points]) => {
+              if (points > 0) {
+                productPoints[productId] = points;
+              } else {
+                delete productPoints[productId];
+              }
+            });
+            onUpdatePointSettings({ ...pointSettings, productPoints });
+          }
         }}
       />
 

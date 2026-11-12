@@ -23,7 +23,12 @@ interface ExcelProductUploadModalProps {
   onClose: () => void;
   existingProducts: Product[];
   existingCategories: Category[];
-  onImportProducts: (newProducts: Product[], newCategories: Category[]) => void;
+  canEditPoints?: boolean;
+  onImportProducts: (
+    newProducts: Product[],
+    newCategories: Category[],
+    pointUpdates?: Record<string, number>
+  ) => void;
 }
 
 interface ParsedProductRow {
@@ -38,6 +43,8 @@ interface ParsedProductRow {
   barcode: string;
   unit: string;
   stock: number;
+  points: number;
+  hasPointValue: boolean;
   isExisting: boolean;
   isValid: boolean;
   validationError?: string;
@@ -48,6 +55,7 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
   onClose,
   existingProducts,
   existingCategories,
+  canEditPoints = false,
   onImportProducts,
 }) => {
   const [file, setFile] = useState<File | null>(null);
@@ -129,7 +137,11 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
         },
       ];
 
-      const ws = XLSX.utils.json_to_sheet(templateData);
+      const templateRows = canEditPoints
+        ? templateData.map((item) => ({ ...item, poin: 1 }))
+        : templateData;
+
+      const ws = XLSX.utils.json_to_sheet(templateRows);
 
       // Set column widths for nice appearance
       ws['!cols'] = [
@@ -143,6 +155,7 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
         { wch: 18 }, // barcode
         { wch: 10 }, // satuan
         { wch: 10 }, // stok
+        ...(canEditPoints ? [{ wch: 10 }] : []), // poin
       ];
 
       const wb = XLSX.utils.book_new();
@@ -284,6 +297,24 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
           ) || 50
         );
 
+        const rawPointValue = [
+          normalizedRow['poin'],
+          normalizedRow['points'],
+          normalizedRow['point'],
+          normalizedRow['poinperunit'],
+          normalizedRow['poinperitem'],
+          normalizedRow['poinproduk'],
+          normalizedRow['rewardpoint'],
+          normalizedRow['rewardpoints'],
+        ].find(
+          (value) =>
+            value !== undefined && value !== null && String(value).trim() !== ''
+        );
+        const hasPointValue = rawPointValue !== undefined;
+        const points = hasPointValue
+          ? Math.max(0, Math.floor(Number(rawPointValue) || 0))
+          : 0;
+
         let isValid = true;
         let validationError = '';
 
@@ -309,6 +340,8 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
           barcode,
           unit,
           stock,
+          points,
+          hasPointValue,
           isExisting,
           isValid,
           validationError,
@@ -393,6 +426,7 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
     let insertedCount = 0;
     let updatedCount = 0;
     let skippedCount = 0;
+    const pointUpdates: Record<string, number> = {};
 
     validRows.forEach((row) => {
       const codeKey = row.code.toLowerCase().trim();
@@ -420,6 +454,9 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
             stock: row.stock !== undefined ? row.stock : existingProduct.stock,
           };
           productMap.set(codeKey, updated);
+          if (canEditPoints && row.hasPointValue) {
+            pointUpdates[existingProduct.id] = row.points;
+          }
           updatedCount++;
         } else {
           skippedCount++;
@@ -441,13 +478,17 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
           minStock: 10,
         };
         productMap.set(codeKey, newProduct);
+        if (canEditPoints && row.hasPointValue) {
+          pointUpdates[newProduct.id] = row.points;
+        }
         insertedCount++;
       }
     });
 
     const finalProductList = Array.from(productMap.values());
+    const pointUpdateCount = Object.keys(pointUpdates).length;
 
-    onImportProducts(finalProductList, updatedCategories);
+    onImportProducts(finalProductList, updatedCategories, pointUpdates);
     playBeep('success');
 
     alert(
@@ -455,7 +496,10 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
       `• Produk Baru Ditambahkan: ${insertedCount}\n` +
       `• Produk Diperbarui: ${updatedCount}\n` +
       `• Produk Dilewati: ${skippedCount}\n` +
-      `• Kategori Baru Terdaftar: ${newCategoriesToAdd.length}`
+      `• Kategori Baru Terdaftar: ${newCategoriesToAdd.length}` +
+      (pointUpdateCount > 0
+        ? `\n• Poin Produk Diperbarui: ${pointUpdateCount}`
+        : '')
     );
 
     onClose();
@@ -494,7 +538,7 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
                 </span>
               </h2>
               <p className="text-xs text-emerald-100 mt-0.5">
-                Impor massal data produk lengkap: kode, nama, kategori, harga pokok, harga jual outlet, dan harga jual mall.
+                Impor massal data produk lengkap: kode, nama, kategori, harga pokok, harga jual outlet, harga jual mall, dan poin per unit.
               </p>
             </div>
           </div>
@@ -563,7 +607,7 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
               <p className="text-xs text-slate-500 mt-1 max-w-md">
                 {file
                   ? 'Klik kembali jika ingin memilih file spreadsheet lain'
-                  : 'Sistem membaca kolom: kode, nama, kategori, harga_pokok, harga_jual_outlet, harga_jual_mall'}
+                  : `Sistem membaca kolom: kode, nama, kategori, harga_pokok, harga_jual_outlet, harga_jual_mall${canEditPoints ? ', poin' : ''}`}
               </p>
             </div>
           </div>
@@ -639,6 +683,9 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
                       <th className="py-2.5 px-3 font-semibold text-right">Harga Pokok</th>
                       <th className="py-2.5 px-3 font-semibold text-right text-blue-700">Harga Outlet</th>
                       <th className="py-2.5 px-3 font-semibold text-right text-amber-700">Harga Mall</th>
+                      {canEditPoints && (
+                        <th className="py-2.5 px-3 font-semibold text-center text-amber-700">Poin</th>
+                      )}
                       <th className="py-2.5 px-3 font-semibold text-center">Status</th>
                     </tr>
                   </thead>
@@ -684,6 +731,15 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
                           <td className="py-2 px-3 text-right font-mono-numbers font-bold text-amber-700">
                             {formatRupiah(row.sellPriceMall)}
                           </td>
+                          {canEditPoints && (
+                            <td className="py-2 px-3 text-center font-mono text-[11px] font-bold text-amber-700">
+                              {row.hasPointValue ? (
+                                row.points
+                              ) : (
+                                <span className="text-slate-300">-</span>
+                              )}
+                            </td>
+                          )}
                           <td className="py-2 px-3 text-center">
                             {!row.isValid ? (
                               <span className="text-[10px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold">
