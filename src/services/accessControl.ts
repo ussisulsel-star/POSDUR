@@ -132,7 +132,11 @@ export function getPermittedOutlets(user: PosUser | null | undefined, outlets: O
   if (allowed.size === 0 && user.outletId) {
     allowed.add(user.outletId);
   }
-  if (allowed.size === 0) return [];
+  // Sesi hasil login API belum membawa metadata outlet. Daripada mengunci
+  // akun non-admin keluar dari terminal, batasi ke outlet utama saja.
+  if (allowed.size === 0) {
+    return outlets.slice(0, 1);
+  }
 
   return outlets.filter((o) => allowed.has(o.id));
 }

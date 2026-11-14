@@ -11,7 +11,7 @@ Proyek ini terdiri dari dua bagian:
 | Database | PostgreSQL (12 tabel, multi-tenant) | `db/` |
 | Deployment | Docker Compose + Nginx | `docker/` |
 
-> **Status integrasi:** frontend saat ini menyimpan data di `localStorage` (`src/services/storageService.ts`) dan **belum** memanggil API. Backend sudah siap dipakai (login, produk, checkout, shift, retur) untuk tahap integrasi berikutnya.
+> **Status integrasi:** login, katalog produk, checkout/nota, buka-tutup shift, kas masuk/keluar, dan retur sudah memakai REST API (`src/services/apiService.ts` + `src/services/posApi.ts`). Master data lain (produk, pengguna, pelanggan, kategori, cabang) serta koreksi/void transaksi masih disimpan di `localStorage` (`src/services/storageService.ts`) dan menjadi tahap integrasi berikutnya.
 
 ---
 

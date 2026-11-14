@@ -158,26 +158,25 @@ export const StorageService = {
   getUser(): User | null {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.USER);
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      if (!data || !token || token.endsWith('.ketoko_signature_99999')) {
+        localStorage.removeItem(STORAGE_KEYS.USER);
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        return null;
+      }
       return data ? JSON.parse(data) : null;
     } catch {
       return null;
     }
   },
 
-  setUser(user: User | null) {
+  setUser(user: User | null, token?: string) {
     if (user) {
+      if (!token?.trim()) {
+        throw new Error('Token autentikasi server wajib tersedia untuk menyimpan sesi.');
+      }
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-      // Store dummy simulated JWT token
-      const dummyJwt = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.${btoa(
-        JSON.stringify({
-          sub: user.id,
-          companyId: user.companyId,
-          userId: user.userId,
-          role: user.role,
-          exp: Math.floor(Date.now() / 1000) + 86400,
-        })
-      )}.ketoko_signature_99999`;
-      localStorage.setItem(STORAGE_KEYS.TOKEN, dummyJwt);
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token);
     } else {
       localStorage.removeItem(STORAGE_KEYS.USER);
       localStorage.removeItem(STORAGE_KEYS.TOKEN);

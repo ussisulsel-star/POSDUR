@@ -20,6 +20,15 @@ import {
 } from './types/pos';
 import { StorageService, playBeep } from './services/storageService';
 import {
+  addCashMovementWithApi,
+  checkoutWithApi,
+  closeShiftWithApi,
+  loadCorePosData,
+  openShiftWithApi,
+  returnWithApi,
+} from './services/posApi';
+import { ApiError } from './services/apiService';
+import {
   AppTab,
   canAccessMasterData,
   canAccessTab,
@@ -122,6 +131,8 @@ export default function App() {
 
   // Barcode input ref for keyboard focus
   const barcodeInputRef = useRef<HTMLInputElement | null>(null);
+  // Menandai sesi user yang datanya sudah dimuat dari API (hindari fetch ganda)
+  const hydratedUserIdRef = useRef<string | null>(null);
 
   // Helper to generate Invoice ID: PJ-202611-XXXX
   function generateInvoiceNo(): string {
@@ -439,7 +450,7 @@ export default function App() {
   }, [maxRedeemablePoints]);
 
   // Process completed payment
-  const handleProcessPayment = (
+  const handleProcessPayment = async (
     payments: PaymentDetail[],
     payAmount: number,
     changeAmount: number,
@@ -482,15 +493,60 @@ export default function App() {
       pointDiscount: pointDiscountAmount,
     };
 
-    // Save transaction, update stock, shift stats, and customer loyalty
-    StorageService.saveTransaction(newTx);
-    setTransactions(StorageService.getTransactions());
-    setProducts(StorageService.getProducts());
-    setActiveShift(StorageService.getActiveShift());
-    setCustomers(StorageService.getCustomers());
+    let savedTransaction: { id: string; shiftId: string | null };
+    try {
+      savedTransaction = await checkoutWithApi({
+        invoiceNo,
+        customerName: selectedCustomer.name,
+        ...(activeShift ? { shiftId: activeShift.id } : {}),
+        items: cart.map((item) => ({
+          productId: item.product.id,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          discountRp: item.discountRp,
+        })),
+        discountTotal:
+          itemsDiscountTotal + invoiceDiscountAmount + pointDiscountAmount,
+        taxTotal: taxAmount,
+        grandTotal,
+        payAmount,
+        payments: payments.map((payment) => ({
+          ...payment,
+          bankName: payment.bankName || payment.emoneyName,
+        })),
+        notes: newTx.notes,
+      });
+    } catch (error) {
+      alert(
+        `Transaksi belum tersimpan: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+      return;
+    }
+
+    const persistedTransaction = {
+      ...newTx,
+      id: savedTransaction.id,
+      shiftId: savedTransaction.shiftId || 'no-shift',
+    };
 
     setPaymentModalOpen(false);
-    setActiveReceiptTransaction(newTx);
+    setActiveReceiptTransaction(persistedTransaction);
+    setTransactions((current) => [persistedTransaction, ...current]);
+
+    try {
+      const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
+      setProducts(coreData.products);
+      setActiveShift(coreData.activeShift);
+      setTransactions(coreData.transactions);
+    } catch (error) {
+      alert(
+        `Transaksi ${invoiceNo} sudah tersimpan, tetapi data layar gagal diperbarui: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
 
     if (shouldPrint) {
       setReceiptModalOpen(true);
@@ -501,53 +557,106 @@ export default function App() {
   };
 
   // Shift management handlers
-  const handleCloseShift = (actualCash: number, notes: string) => {
-    const closed = StorageService.closeCurrentShift(actualCash, notes);
-    setActiveShift(null);
-    setShiftHistory(StorageService.getShiftHistory());
-    alert(`Shift Kasir berhasil ditutup! Laporan rekonsiliasi kas telah disimpan.`);
+  const handleCloseShift = async (actualCash: number, notes: string) => {
+    try {
+      const closed = await closeShiftWithApi(actualCash, notes);
+      setActiveShift(null);
+      setShiftHistory((history) => [
+        { ...closed, outletId: activeOutlet.id, outletName: activeOutlet.name },
+        ...history,
+      ]);
+      alert(`Shift Kasir berhasil ditutup! Laporan rekonsiliasi kas telah disimpan.`);
+    } catch (error) {
+      alert(
+        `Shift belum berhasil ditutup: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
   };
 
-  const handleOpenNewShift = (initialCash: number, cashierName: string) => {
-    const newShift: Shift = {
-      id: 'shift-' + Date.now(),
-      shiftNumber: (shiftHistory.length || 0) + 1,
-      outletId: activeOutlet.id,
-      outletName: activeOutlet.name,
-      cashierId: user?.userId || 'ADMIN',
-      cashierName,
-      companyId: user?.companyId || '99999',
-      startTime: new Date().toISOString(),
-      initialCash,
-      totalCashSales: 0,
-      totalNonCashSales: 0,
-      totalCashIn: 0,
-      totalCashOut: 0,
-      expectedCash: initialCash,
-      status: 'OPEN',
-      notes: `Shift Baru [${activeOutlet.code}]`,
-    };
-    StorageService.saveActiveShift(newShift);
-    setActiveShift(newShift);
+  const handleOpenNewShift = async (initialCash: number, cashierName: string) => {
+    try {
+      const opened = await openShiftWithApi(
+        initialCash,
+        `Shift Baru [${activeOutlet.code}] · ${cashierName}`
+      );
+      setActiveShift({
+        ...opened,
+        outletId: activeOutlet.id,
+        outletName: activeOutlet.name,
+      });
+    } catch (error) {
+      alert(
+        `Shift belum berhasil dibuka: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
   };
 
   // Cash movement (Kas Masuk / Kas Keluar Operasional - F10)
-  const handleAddCashMovement = (type: 'MASUK' | 'KELUAR', amount: number, reason: string) => {
-    StorageService.addCashMovement(type, amount, reason, user?.userId || 'ADMIN');
-    setActiveShift(StorageService.getActiveShift());
-    alert(`Kas ${type} sebesar Rp ${amount.toLocaleString('id-ID')} berhasil dicatat.`);
+  const handleAddCashMovement = async (type: 'MASUK' | 'KELUAR', amount: number, reason: string) => {
+    try {
+      await addCashMovementWithApi(type, amount, reason);
+      const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
+      setActiveShift(coreData.activeShift);
+      setProducts(coreData.products);
+      alert(`Kas ${type} sebesar Rp ${amount.toLocaleString('id-ID')} berhasil dicatat.`);
+    } catch (error) {
+      alert(
+        `Pergerakan kas belum tersimpan: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
   };
 
   // Sales Return
-  const handleProcessReturn = (salesReturn: SalesReturn) => {
+  const handleProcessReturn = async (salesReturn: SalesReturn): Promise<boolean> => {
     if (!canReturn(user)) {
       playBeep('error');
       alert('Akun Anda tidak memiliki kewenangan memproses retur penjualan.');
-      return;
+      return false;
     }
+
+    try {
+      await returnWithApi({
+        returnNo: salesReturn.returnNo,
+        invoiceNo: salesReturn.invoiceNo,
+        refundMethod: salesReturn.refundMethod,
+        items: salesReturn.items.map((item) => ({
+          productId: item.productId,
+          qty: item.qty,
+          reason: item.reason,
+        })),
+      });
+    } catch (error) {
+      playBeep('error');
+      alert(
+        `Retur belum tersimpan: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+      return false;
+    }
+
     StorageService.saveReturn(salesReturn);
-    setProducts(StorageService.getProducts());
-    setActiveShift(StorageService.getActiveShift());
+
+    try {
+      const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
+      setProducts(coreData.products);
+      setActiveShift(coreData.activeShift);
+      setTransactions(coreData.transactions);
+    } catch (error) {
+      alert(
+        `Retur ${salesReturn.returnNo} sudah tersimpan, tetapi data layar gagal diperbarui: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
+
+    return true;
   };
 
   // Customer registration
@@ -600,8 +709,20 @@ export default function App() {
   };
 
   // Handle Login & Logout
-  const handleLoginSuccess = (loggedUser: PosUser) => {
-    StorageService.setUser(loggedUser);
+  const handleLoginSuccess = async (loggedUser: PosUser, token: string) => {
+    StorageService.setUser(loggedUser, token);
+    try {
+      const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
+      setProducts(coreData.products);
+      setActiveShift(coreData.activeShift);
+      setTransactions(coreData.transactions);
+    } catch (error) {
+      hydratedUserIdRef.current = null;
+      StorageService.setUser(null);
+      throw error;
+    }
+
+    hydratedUserIdRef.current = loggedUser.id;
     setUser(loggedUser);
     setActiveTab(getDefaultTab(loggedUser));
     const validOutlet = enforceOutletAuthorization(loggedUser, activeOutlet);
@@ -610,14 +731,11 @@ export default function App() {
     }
   };
 
-  const handleSwitchUser = (newUser: PosUser) => {
-    StorageService.setUser(newUser);
-    setUser(newUser);
-    setActiveTab(getDefaultTab(newUser));
-    const validOutlet = enforceOutletAuthorization(newUser, activeOutlet);
-    if (validOutlet) {
-      setActiveOutlet(validOutlet);
-    }
+  const handleSwitchUser = (_newUser: PosUser) => {
+    hydratedUserIdRef.current = null;
+    StorageService.setUser(null);
+    setUser(null);
+    setActiveTab('pos');
   };
 
   // Handle Supervisor Transaction Corrections and Deletions
@@ -651,6 +769,7 @@ export default function App() {
 
   const handleConfirmLogout = () => {
     playBeep('delete');
+    hydratedUserIdRef.current = null;
     StorageService.setUser(null);
     setUser(null);
     setActiveTab('pos');
@@ -672,6 +791,42 @@ export default function App() {
       setActiveOutlet(fallback);
     }
   }, [user, activeTab, outlets, activeOutlet.id]);
+
+  // Pulihkan sesi setelah refresh halaman: data POS harus selalu berasal dari
+  // API, bukan cache localStorage yang bisa berisi katalog/nota lama.
+  useEffect(() => {
+    if (!user || hydratedUserIdRef.current === user.id) return;
+    hydratedUserIdRef.current = user.id;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
+        if (cancelled) return;
+        setProducts(coreData.products);
+        setActiveShift(coreData.activeShift);
+        setTransactions(coreData.transactions);
+      } catch (error) {
+        if (cancelled) return;
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          hydratedUserIdRef.current = null;
+          StorageService.setUser(null);
+          setUser(null);
+          setActiveTab('pos');
+          return;
+        }
+        alert(
+          `Data POS gagal dimuat dari server: ${
+            error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+          }`
+        );
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, activeOutlet.id, activeOutlet.name]);
 
   // If user is not logged in, show Login Screen
   if (!user) {

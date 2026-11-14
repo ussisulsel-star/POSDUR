@@ -1,64 +1,43 @@
 import React, { useState } from 'react';
 import { Building2, User, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { User as PosUser } from '../../types/pos';
-import { playBeep, StorageService } from '../../services/storageService';
+import { playBeep } from '../../services/storageService';
+import { loginWithApi } from '../../services/posApi';
 
 interface LoginPageProps {
-  onLoginSuccess: (user: PosUser) => void;
+  onLoginSuccess: (user: PosUser, token: string) => void | Promise<void>;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [companyId, setCompanyId] = useState<string>('99999');
-  const [userId, setUserId] = useState<string>('ADMIN');
+  const [companyId, setCompanyId] = useState<string>('001');
+  const [userId, setUserId] = useState<string>('001');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    setTimeout(() => {
-      const cId = companyId.trim();
-      const uId = userId.trim().toUpperCase();
-      const pwd = password.trim();
-
-      // Check users from storage
-      const usersList = StorageService.getUsers();
-      const matched = usersList.find(
-        (u) => u.companyId === cId && u.userId.toUpperCase() === uId
+    try {
+      const result = await loginWithApi(
+        companyId.trim(),
+        userId.trim(),
+        password
       );
-
-      if (matched) {
-        if (matched.isActive === false) {
-          playBeep('error');
-          setError(`Akun ${matched.name} (${matched.userId}) sedang dinonaktifkan oleh administrator.`);
-          setIsLoading(false);
-          return;
-        }
-
-        // Hanya password atau PIN milik akun itu sendiri yang diterima.
-        // Tidak ada lagi password universal.
-        const isPasswordCorrect =
-          (!!matched.password && pwd === matched.password) ||
-          (!!matched.pin && pwd === matched.pin);
-
-        if (isPasswordCorrect) {
-          playBeep('success');
-          // Update lastLogin
-          const updatedUser = { ...matched, lastLogin: new Date().toISOString() };
-          StorageService.updateUser(updatedUser);
-          onLoginSuccess(updatedUser);
-          return;
-        }
-      }
-
-      // Tidak ada fallback kredensial universal: akun harus terdaftar & aktif.
+      playBeep('success');
+      await onLoginSuccess(result.user, result.token);
+    } catch (loginError) {
       playBeep('error');
-      setError('ID Perusahaan, User ID, atau Password tidak sesuai. Silakan periksa kembali kredensial akun Anda.');
+      setError(
+        loginError instanceof Error
+          ? loginError.message
+          : 'Login gagal. Periksa koneksi server dan kredensial.'
+      );
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
   return (
@@ -67,11 +46,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       <div className="flex items-center justify-between max-w-5xl w-full mx-auto text-xs text-slate-400">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="font-mono text-slate-300">Server Cloud: pos.catatpos.id (Online)</span>
+          <span className="font-mono text-slate-300">POSDUR · Server diperiksa saat login</span>
         </div>
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>SSL 256-bit Encrypted</span>
+          <span>
+            {window.location.protocol === 'https:'
+              ? 'Koneksi HTTPS terenkripsi'
+              : 'HTTP belum terenkripsi · gunakan untuk uji internal'}
+          </span>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ interface ReturnModalProps {
   isOpen: boolean;
   onClose: () => void;
   transactions: Transaction[];
-  onProcessReturn: (ret: SalesReturn) => void;
+  onProcessReturn: (ret: SalesReturn) => Promise<boolean> | boolean | void;
 }
 
 export const ReturnModal: React.FC<ReturnModalProps> = ({
@@ -21,6 +21,7 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({
   const [returnQtys, setReturnQtys] = useState<{ [productId: string]: number }>({});
   const [returnReasons, setReturnReasons] = useState<{ [productId: string]: string }>({});
   const [refundMethod, setRefundMethod] = useState<'TUNAI' | 'POTONG_PIUTANG' | 'GANTI_BARANG'>('TUNAI');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -57,9 +58,9 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({
       }, 0)
     : 0;
 
-  const handleSubmitReturn = (e: React.FormEvent) => {
+  const handleSubmitReturn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTx) return;
+    if (!selectedTx || isSubmitting) return;
 
     const returnItems = selectedTx.items
       .filter((item) => (returnQtys[item.product.id] || 0) > 0)
@@ -90,10 +91,23 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({
       refundMethod,
     };
 
-    playBeep('success');
-    onProcessReturn(retObj);
-    alert(`Retur Penjualan ${retObj.returnNo} berhasil diproses.`);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      const saved = await onProcessReturn(retObj);
+      if (saved === false) return;
+      playBeep('success');
+      alert(`Retur Penjualan ${retObj.returnNo} berhasil diproses.`);
+      onClose();
+    } catch (error) {
+      playBeep('error');
+      alert(
+        `Retur belum tersimpan: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -236,11 +250,11 @@ export const ReturnModal: React.FC<ReturnModalProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={totalRefund <= 0}
+                  disabled={totalRefund <= 0 || isSubmitting}
                   className="py-2 px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-40"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  <span>Proses Retur Penjualan</span>
+                  <span>{isSubmitting ? 'Menyimpan...' : 'Proses Retur Penjualan'}</span>
                 </button>
               </div>
             </form>
