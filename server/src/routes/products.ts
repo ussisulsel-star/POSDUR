@@ -166,12 +166,30 @@ router.post(
       min: 0,
       fallback: 5,
     });
+    const brand = optionalString(body.brand, 'brand', 100);
+    const sellPriceMall =
+      body.sellPriceMall === undefined
+        ? null
+        : parseMoney(body.sellPriceMall, 'sellPriceMall', { min: 0 });
+    const image = optionalString(body.image, 'image', 2000);
+    const isPackage = body.isPackage === true;
+    const packageItems = Array.isArray(body.packageItems)
+      ? body.packageItems
+      : [];
+    const outletStocks =
+      body.outletStocks &&
+      typeof body.outletStocks === 'object' &&
+      !Array.isArray(body.outletStocks)
+        ? body.outletStocks
+        : {};
 
     const { rows } = await query(
       `INSERT INTO products
-         (company_id, code, barcode, name, category_id, unit,
-          cost_price, sell_price, wholesale_price, stock, min_stock)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         (company_id, code, barcode, name, category_id, brand, unit,
+          cost_price, sell_price, sell_price_mall, wholesale_price, stock, min_stock,
+          image, is_package, package_items, outlet_stocks)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+               $14, $15, $16::jsonb, $17::jsonb)
        RETURNING *`,
       [
         companyId,
@@ -179,12 +197,18 @@ router.post(
         barcode,
         name,
         categoryId,
+        brand,
         unit,
         costPrice,
         sellPrice,
+        sellPriceMall,
         wholesalePrice,
         stock,
         minStock,
+        image,
+        isPackage,
+        JSON.stringify(packageItems),
+        JSON.stringify(outletStocks),
       ]
     );
 
@@ -252,6 +276,42 @@ router.put(
     }
     const isActive = body.isActive === undefined ? null : body.isActive;
 
+    const brand =
+      body.brand === undefined ? null : optionalString(body.brand, 'brand', 100);
+    const sellPriceMall =
+      body.sellPriceMall === undefined
+        ? null
+        : parseMoney(body.sellPriceMall, 'sellPriceMall', { min: 0 });
+    const image =
+      body.image === undefined ? null : optionalString(body.image, 'image', 2000);
+    const isPackage =
+      body.isPackage === undefined
+        ? null
+        : (() => {
+            if (typeof body.isPackage !== 'boolean') {
+              throw new ApiError(400, 'isPackage harus berupa boolean.');
+            }
+            return body.isPackage;
+          })();
+    const packageItems =
+      body.packageItems === undefined
+        ? null
+        : Array.isArray(body.packageItems)
+          ? JSON.stringify(body.packageItems)
+          : (() => {
+              throw new ApiError(400, 'packageItems harus berupa array.');
+            })();
+    const outletStocks =
+      body.outletStocks === undefined
+        ? null
+        : body.outletStocks &&
+            typeof body.outletStocks === 'object' &&
+            !Array.isArray(body.outletStocks)
+          ? JSON.stringify(body.outletStocks)
+          : (() => {
+              throw new ApiError(400, 'outletStocks harus berupa objek.');
+            })();
+
     const { rows } = await query(
       `UPDATE products
           SET code = COALESCE($3, code),
@@ -265,6 +325,12 @@ router.put(
               stock = COALESCE($11, stock),
               min_stock = COALESCE($12, min_stock),
               is_active = COALESCE($13, is_active),
+              brand = COALESCE($14, brand),
+              sell_price_mall = COALESCE($15, sell_price_mall),
+              image = COALESCE($16, image),
+              is_package = COALESCE($17, is_package),
+              package_items = COALESCE($18::jsonb, package_items),
+              outlet_stocks = COALESCE($19::jsonb, outlet_stocks),
               updated_at = NOW()
         WHERE company_id = $1 AND id = $2
         RETURNING *`,
@@ -282,6 +348,12 @@ router.put(
         stock,
         minStock,
         isActive,
+        brand,
+        sellPriceMall,
+        image,
+        isPackage,
+        packageItems,
+        outletStocks,
       ]
     );
 

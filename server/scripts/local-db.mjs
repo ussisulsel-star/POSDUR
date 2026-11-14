@@ -34,6 +34,11 @@ async function applySqlFile(client, relativePath) {
   await client.query(sql);
 }
 
+/** Pastikan file SQL UTF-8 terbaca konsisten di cluster Windows (default WIN1252). */
+async function ensureUtf8Client(client) {
+  await client.query("SET client_encoding TO 'UTF8'");
+}
+
 async function main() {
   const alreadyInitialised = fs.existsSync(path.join(dataDir, 'PG_VERSION'));
 
@@ -60,6 +65,7 @@ async function main() {
 
   const client = postgres.getPgClient(database);
   await client.connect();
+  await ensureUtf8Client(client);
 
   const schemaCheck = await client.query(
     "SELECT to_regclass('public.companies') AS table_name"
@@ -75,6 +81,13 @@ async function main() {
   } else {
     console.log('[db] Skema sudah ada, seed dilewati.');
   }
+
+  // Migrasi & seed tambahan bersifat idempoten, selalu dijalankan.
+  console.log('[db] Menerapkan migrasi 002_master_data.sql ...');
+  await applySqlFile(client, 'db/migrations/002_master_data.sql');
+  console.log('[db] Menerapkan seed 002_master_data.sql ...');
+  await applySqlFile(client, 'db/seeds/002_master_data.sql');
+  console.log('[db] Migrasi master data selesai.');
 
   await client.end();
 

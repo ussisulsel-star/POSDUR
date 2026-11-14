@@ -4,8 +4,6 @@ import {
   UserPlus, 
   Search, 
   ShieldCheck, 
-  Key, 
-  Lock, 
   Check, 
   X, 
   Trash2, 
@@ -13,8 +11,6 @@ import {
   UserCheck, 
   UserX, 
   LogIn, 
-  Eye, 
-  EyeOff, 
   Phone,
   CheckCircle2,
   AlertCircle,
@@ -81,7 +77,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [editingUser, setEditingUser] = useState<PosUser | null>(null);
   const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
-  const [showPins, setShowPins] = useState<{ [id: string]: boolean }>({});
 
   // Filtered users
   const filteredUsers = users.filter((u) => {
@@ -98,10 +93,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const totalCashiers = users.filter((u) => u.role === 'KASIR').length;
   const totalSupervisors = users.filter((u) => u.role === 'SUPERVISOR').length;
   const totalAdmins = users.filter((u) => u.role === 'ADMIN').length;
-
-  const handleTogglePinVisibility = (id: string) => {
-    setShowPins((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
 
   const handleToggleActiveStatus = (user: PosUser) => {
     if (user.id === currentUser.id) {
@@ -139,7 +130,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     }
 
     if (!editingUser.password?.trim() && !editingUser.pin?.trim()) {
-      alert('Password atau PIN akun wajib diisi agar pengguna dapat login dengan kredensialnya sendiri.');
+      if (isAddingNew) {
+        alert('Password akun wajib diisi agar pengguna baru dapat login.');
+        return;
+      }
+    }
+
+    if (editingUser.pin?.trim() && !/^\d{4,6}$/.test(editingUser.pin.trim())) {
+      alert('PIN harus berupa 4 sampai 6 digit angka.');
       return;
     }
 
@@ -225,7 +223,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       canAccessAllOutlets: false,
       allowedOutletIds: [defaultOutlet],
       password: '',
-      pin: Math.floor(1000 + Math.random() * 9000).toString(),
+      pin: '',
       phone: '',
       isActive: true,
       lastLogin: new Date().toISOString(),
@@ -367,7 +365,6 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                 ) : (
                   filteredUsers.map((user) => {
                     const isSelf = user.id === currentUser.id;
-                    const isPinRevealed = showPins[user.id];
 
                     return (
                       <tr
@@ -450,19 +447,22 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                           )}
                         </td>
 
-                        {/* PIN */}
-                        <td className="py-3 px-3 font-mono">
+                        {/* PIN (hash tidak pernah dikirim ke klien) */}
+                        <td className="py-3 px-3">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-700 tracking-wider">
-                              {isPinRevealed ? user.pin || '----' : '••••'}
-                            </span>
-                            <button
-                              onClick={() => handleTogglePinVisibility(user.id)}
-                              className="p-1 text-slate-400 hover:text-slate-600 rounded"
-                              title={isPinRevealed ? 'Sembunyikan PIN' : 'Tampilkan PIN'}
-                            >
-                              {isPinRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
+                            {user.hasPin ? (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                title="PIN tersimpan sebagai hash dan tidak dapat ditampilkan"
+                              >
+                                <ShieldCheck className="w-3 h-3" />
+                                <span>PIN Aktif</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                Belum Diatur
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -670,16 +670,25 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">
-                    PIN Cepat Kasir (4 Digit):
+                    PIN Cepat Kasir (4-6 Digit):
                   </label>
                   <input
                     type="text"
                     maxLength={6}
+                    inputMode="numeric"
                     value={editingUser.pin || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, pin: e.target.value })}
-                    placeholder="1234"
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        pin: e.target.value.replace(/\D/g, ''),
+                      })
+                    }
+                    placeholder={editingUser.hasPin ? 'Kosongkan bila tetap' : '1234'}
                     className="w-full p-2 bg-slate-50 border border-slate-300 rounded font-mono font-bold text-center tracking-widest text-slate-900 focus:outline-none"
                   />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    PIN disimpan sebagai hash dan tidak dapat ditampilkan kembali.
+                  </p>
                 </div>
               </div>
 

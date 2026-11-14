@@ -11,7 +11,6 @@ import {
   LogOut, 
   FileText, 
   Boxes, 
-  Layers, 
   CreditCard,
   Maximize2,
   Minimize2,
@@ -26,7 +25,6 @@ import {
   canAccessTab,
   canOpenDrawer,
   canReturn,
-  canViewDocs,
   canViewReports,
   getPermittedOutlets,
 } from '../../services/accessControl';
@@ -231,20 +229,6 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
             >
               <FileText className="w-3.5 h-3.5" />
               <span>Laporan</span>
-            </button>
-          )}
-
-          {canViewDocs(user) && (
-            <button
-              onClick={() => setActiveTab('docs')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                activeTab === 'docs'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-emerald-300 hover:text-white hover:bg-emerald-950/40 border border-emerald-500/30'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5 text-emerald-300" />
-              <span className="font-bold">Arsitektur & API Docs</span>
             </button>
           )}
         </nav>

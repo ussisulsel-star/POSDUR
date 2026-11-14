@@ -37,7 +37,10 @@ router.post(
 
     const { rows } = await query(
       `SELECT u.id, u.company_id, u.user_id, u.name, u.password_hash, u.role,
-              u.is_active, u.created_at, c.name AS company_name
+              u.is_active, u.created_at, u.phone, u.outlet_id,
+              u.allowed_outlet_ids, u.can_access_all_outlets, u.permissions,
+              u.last_login, (u.pin_hash IS NOT NULL) AS has_pin,
+              c.name AS company_name
          FROM users u
          JOIN companies c ON c.id = u.company_id
         WHERE u.company_id = $1 AND UPPER(u.user_id) = UPPER($2)
@@ -63,6 +66,9 @@ router.post(
         `Akun ${user.name} (${user.user_id}) sedang dinonaktifkan oleh administrator.`
       );
     }
+
+    await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [user.id]);
+    user.last_login = new Date().toISOString();
 
     const token = jwt.sign(
       {
@@ -98,7 +104,10 @@ router.get(
   asyncHandler(async (req, res) => {
     const { rows } = await query(
       `SELECT u.id, u.company_id, u.user_id, u.name, u.role, u.is_active,
-              u.created_at, c.name AS company_name
+              u.created_at, u.phone, u.outlet_id, u.allowed_outlet_ids,
+              u.can_access_all_outlets, u.permissions, u.last_login,
+              (u.pin_hash IS NOT NULL) AS has_pin,
+              c.name AS company_name
          FROM users u
          JOIN companies c ON c.id = u.company_id
         WHERE u.company_id = $1 AND u.id = $2

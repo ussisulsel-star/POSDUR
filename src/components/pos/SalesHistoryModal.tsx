@@ -14,6 +14,7 @@ interface SalesHistoryModalProps {
     password: string,
     reason: string
   ) => void | Promise<void>;
+  onEditTransaction?: (transaction: Transaction) => void;
   currentUser?: PosUser | null;
   canVoid?: boolean;
 }
@@ -24,6 +25,7 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
   transactions,
   onSelectTransactionForPrint,
   onDeleteTransaction,
+  onEditTransaction,
   currentUser,
   canVoid = false,
 }) => {
@@ -33,12 +35,13 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleRequestEdit = () => {
-    playBeep('error');
-    alert(
-      'Koreksi/edit transaksi belum didukung oleh server.\n\n' +
-        'Silakan void transaksi yang salah, lalu buat transaksi baru agar stok, poin, dan rekap shift tetap konsisten.'
-    );
+  const handleRequestEdit = (transaction: Transaction) => {
+    if (!onEditTransaction) {
+      playBeep('error');
+      alert('Fitur koreksi transaksi tidak tersedia pada sesi ini.');
+      return;
+    }
+    onEditTransaction(transaction);
   };
 
   const filtered = transactions.filter(
@@ -150,7 +153,7 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 playBeep('scan');
-                                handleRequestEdit();
+                                handleRequestEdit(t);
                               }}
                               className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded"
                               title="Koreksi Transaksi (SPV)"
@@ -284,7 +287,7 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
                       <button
                         onClick={() => {
                           playBeep('scan');
-                          handleRequestEdit();
+                          handleRequestEdit(selectedTx);
                         }}
                         className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                       >

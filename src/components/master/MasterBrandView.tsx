@@ -62,7 +62,7 @@ const EMOJI_PRESETS = [
 const emptyDraft = (): BrandDraft => ({
   name: '',
   tagline: '',
-  emoji: '🏷️',
+  emoji: '',
   colorKey: 'blue',
 });
 
@@ -129,7 +129,7 @@ export const MasterBrandView: React.FC<MasterBrandViewProps> = ({
 
     const name = draft.name.trim();
     const tagline = draft.tagline.trim();
-    const emoji = draft.emoji.trim() || '🏷️';
+    const emoji = draft.emoji.trim();
 
     if (!name) {
       playBeep('error');

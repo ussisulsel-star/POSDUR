@@ -1,7 +1,11 @@
 import {
+  Brand,
   CartItem,
+  Category,
   Customer,
+  Outlet,
   PaymentDetail,
+  PointSettings,
   Product,
   Shift,
   Transaction,
@@ -39,6 +43,9 @@ interface ApiTransaction {
   cashierName: string;
   customerId: string | null;
   customerName: string;
+  customerPhone?: string;
+  outletId?: string;
+  outletName?: string;
   date: string;
   items: ApiTransactionItem[];
   itemCount: number;
@@ -49,6 +56,9 @@ interface ApiTransaction {
   grandTotal: number;
   payAmount: number;
   changeAmount: number;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  pointDiscount?: number;
   payments: PaymentDetail[];
   status: Transaction['status'];
   notes?: string;
@@ -62,6 +72,11 @@ export interface AuthResult {
 export interface CorePosData {
   products: Product[];
   customers: Customer[];
+  categories: Category[];
+  brands: Brand[];
+  outlets: Outlet[];
+  pointSettings: PointSettings;
+  users: User[];
   activeShift: Shift | null;
   transactions: Transaction[];
 }
@@ -70,6 +85,8 @@ export interface CheckoutInput {
   invoiceNo: string;
   customerName: string;
   customerId?: string;
+  customerPhone?: string;
+  outletId?: string;
   shiftId?: string;
   pointsRedeemed?: number;
   items: Array<{
@@ -92,6 +109,68 @@ export interface CheckoutResult {
   shiftId: string | null;
 }
 
+export interface ProductInput {
+  code: string;
+  barcode: string;
+  name: string;
+  brand?: string;
+  categoryId?: string;
+  unit?: string;
+  costPrice?: number;
+  sellPrice?: number;
+  sellPriceMall?: number;
+  wholesalePrice?: number;
+  stock?: number;
+  minStock?: number;
+  isActive?: boolean;
+  image?: string;
+  isPackage?: boolean;
+  packageItems?: unknown[];
+  outletStocks?: Record<string, number>;
+}
+
+export interface CategoryInput {
+  id?: string;
+  name: string;
+  icon?: string;
+}
+
+export interface BrandInput {
+  id?: string;
+  name: string;
+  tagline?: string;
+  emoji?: string;
+  colorKey?: string;
+  isActive?: boolean;
+}
+
+export interface OutletInput {
+  id?: string;
+  code: string;
+  name: string;
+  brand?: string;
+  address?: string;
+  phone?: string;
+  city?: string;
+  isHQ?: boolean;
+  isMall?: boolean;
+  isActive?: boolean;
+}
+
+export interface UserInput {
+  userId: string;
+  name: string;
+  role?: User['role'];
+  password?: string;
+  pin?: string;
+  phone?: string;
+  outletId?: string;
+  allowedOutletIds?: string[];
+  canAccessAllOutlets?: boolean;
+  permissions?: Record<string, boolean>;
+  isActive?: boolean;
+}
+
 function mapProduct(product: ApiProduct): Product {
   return {
     ...product,
@@ -103,8 +182,8 @@ function mapProduct(product: ApiProduct): Product {
 function mapTransaction(
   transaction: ApiTransaction,
   productsById: Map<string, Product>,
-  outletId: string,
-  outletName: string
+  fallbackOutletId: string,
+  fallbackOutletName: string
 ): Transaction {
   const items: CartItem[] = transaction.items.map((item) => {
     // Produk bisa saja sudah dihapus/nonaktif atau berada di luar batas
@@ -135,10 +214,10 @@ function mapTransaction(
 
   return {
     ...transaction,
-    outletId,
-    outletName,
+    outletId: transaction.outletId || fallbackOutletId,
+    outletName: transaction.outletName || fallbackOutletName,
     customerId: transaction.customerId || 'cust-umum',
-    customerPhone: undefined,
+    customerPhone: transaction.customerPhone,
     customerTier: 'UMUM',
     shiftId: transaction.shiftId || 'no-shift',
     items,
@@ -147,22 +226,50 @@ function mapTransaction(
 
 export async function loadCorePosData(
   outletId: string,
-  outletName: string
+  outletName: string,
+  includeUsers = false
 ): Promise<CorePosData> {
-  const [apiProducts, apiCustomers, activeShift, apiTransactions] = await Promise.all([
+  const [
+    apiProducts,
+    apiCustomers,
+    apiCategories,
+    apiBrands,
+    apiOutlets,
+    pointSettings,
+    activeShift,
+    apiTransactions,
+    apiUsers,
+  ] = await Promise.all([
     apiRequest<ApiProduct[]>('/products?limit=500'),
     apiRequest<Customer[]>('/customers?limit=500'),
-    apiRequest<ApiShift | null>('/shifts/active'),
+    apiRequest<Category[]>('/categories'),
+    apiRequest<Brand[]>('/brands'),
+    apiRequest<Outlet[]>('/outlets'),
+    apiRequest<PointSettings>('/point-settings'),
+    apiRequest<ApiShift | null>(
+      `/shifts/active?outletId=${encodeURIComponent(outletId)}`
+    ),
     apiRequest<ApiTransaction[]>('/pos/transactions?limit=200'),
+    includeUsers ? apiRequest<User[]>('/users') : Promise.resolve<User[]>([]),
   ]);
+
   const products = apiProducts.map(mapProduct);
   const productsById = new Map(products.map((product) => [product.id, product]));
 
   return {
     products,
     customers: apiCustomers,
+    categories: apiCategories,
+    brands: apiBrands,
+    outlets: apiOutlets,
+    pointSettings,
+    users: apiUsers,
     activeShift: activeShift
-      ? { ...activeShift, outletId, outletName }
+      ? {
+          ...activeShift,
+          outletId: activeShift.outletId || outletId,
+          outletName: activeShift.outletName || outletName,
+        }
       : null,
     transactions: apiTransactions.map((transaction) =>
       mapTransaction(transaction, productsById, outletId, outletName)
@@ -170,8 +277,14 @@ export async function loadCorePosData(
   };
 }
 
-export async function loadShiftHistory(limit = 30): Promise<Shift[]> {
-  return apiRequest<Shift[]>(`/shifts?limit=${limit}`);
+export async function loadShiftHistory(
+  limit = 30,
+  outletId?: string
+): Promise<Shift[]> {
+  const outletQuery = outletId
+    ? `&outletId=${encodeURIComponent(outletId)}`
+    : '';
+  return apiRequest<Shift[]>(`/shifts?limit=${limit}${outletQuery}`);
 }
 
 export interface CustomerInput {
@@ -185,8 +298,31 @@ export interface CustomerInput {
 }
 
 export async function loadCustomers(search = ''): Promise<Customer[]> {
-  const query = search ? `?search=${encodeURIComponent(search)}&limit=500` : '?limit=500';
+  const query = search
+    ? `?search=${encodeURIComponent(search)}&limit=500`
+    : '?limit=500';
   return apiRequest<Customer[]>(`/customers${query}`);
+}
+
+export async function loadProducts(): Promise<Product[]> {
+  const products = await apiRequest<ApiProduct[]>('/products?limit=500');
+  return products.map(mapProduct);
+}
+
+export async function loadCategories(): Promise<Category[]> {
+  return apiRequest<Category[]>('/categories');
+}
+
+export async function loadBrands(): Promise<Brand[]> {
+  return apiRequest<Brand[]>('/brands');
+}
+
+export async function loadOutlets(): Promise<Outlet[]> {
+  return apiRequest<Outlet[]>('/outlets');
+}
+
+export async function loadUsers(): Promise<User[]> {
+  return apiRequest<User[]>('/users');
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
@@ -208,6 +344,128 @@ export async function updateCustomer(
 
 export async function deleteCustomer(customerId: string): Promise<void> {
   await apiRequest(`/customers/${customerId}`, { method: 'DELETE' });
+}
+
+/* ------------------------------------------------------------------ *
+ * Master data: produk, kategori, brand, cabang, pengguna, poin
+ * ------------------------------------------------------------------ */
+
+export async function createProduct(input: ProductInput): Promise<Product> {
+  const product = await apiRequest<ApiProduct>('/products', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return mapProduct(product);
+}
+
+export async function updateProduct(
+  productId: string,
+  input: Partial<ProductInput>
+): Promise<Product> {
+  const product = await apiRequest<ApiProduct>(`/products/${productId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+  return mapProduct(product);
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  await apiRequest(`/products/${productId}`, { method: 'DELETE' });
+}
+
+export async function createCategory(
+  input: CategoryInput
+): Promise<Category> {
+  return apiRequest<Category>('/categories', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCategory(
+  categoryId: string,
+  input: Partial<CategoryInput>
+): Promise<Category> {
+  return apiRequest<Category>(`/categories/${categoryId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteCategory(categoryId: string): Promise<void> {
+  await apiRequest(`/categories/${categoryId}`, { method: 'DELETE' });
+}
+
+export async function createBrand(input: BrandInput): Promise<Brand> {
+  return apiRequest<Brand>('/brands', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateBrand(
+  brandId: string,
+  input: Partial<BrandInput>
+): Promise<Brand> {
+  return apiRequest<Brand>(`/brands/${brandId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteBrand(brandId: string): Promise<void> {
+  await apiRequest(`/brands/${brandId}`, { method: 'DELETE' });
+}
+
+export async function createOutlet(input: OutletInput): Promise<Outlet> {
+  return apiRequest<Outlet>('/outlets', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateOutlet(
+  outletId: string,
+  input: Partial<OutletInput>
+): Promise<Outlet> {
+  return apiRequest<Outlet>(`/outlets/${outletId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteOutlet(outletId: string): Promise<void> {
+  await apiRequest(`/outlets/${outletId}`, { method: 'DELETE' });
+}
+
+export async function createUser(input: UserInput): Promise<User> {
+  return apiRequest<User>('/users', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateUser(
+  userId: string,
+  input: Partial<UserInput>
+): Promise<User> {
+  return apiRequest<User>(`/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  await apiRequest(`/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function updatePointSettings(
+  settings: PointSettings
+): Promise<PointSettings> {
+  return apiRequest<PointSettings>('/point-settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  });
 }
 
 export async function loginWithApi(
@@ -265,33 +523,65 @@ export async function voidTransactionWithApi(
   });
 }
 
+export interface TransactionCorrectionInput {
+  password: string;
+  reason: string;
+  items: Array<{
+    productId: string;
+    qty: number;
+    unitPrice: number;
+    discountRp: number;
+  }>;
+  payments: PaymentDetail[];
+  customerName?: string;
+  customerPhone?: string;
+  taxTotal?: number;
+}
+
+/**
+ * Koreksi transaksi (item/qty/metode bayar) di server. Backend menghitung
+ * ulang stok, poin, dan rekap shift dalam satu transaksi database.
+ */
+export async function correctTransactionWithApi(
+  transactionId: string,
+  input: TransactionCorrectionInput
+): Promise<Transaction> {
+  return apiRequest<Transaction>(`/pos/transactions/${transactionId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function openShiftWithApi(
   initialCash: number,
-  notes: string
+  notes: string,
+  outletId?: string
 ): Promise<ApiShift> {
   return apiRequest<ApiShift>('/shifts/open', {
     method: 'POST',
-    body: JSON.stringify({ initialCash, notes }),
+    body: JSON.stringify({ initialCash, notes, outletId }),
   });
 }
 
 export async function closeShiftWithApi(
   actualCash: number,
-  notes: string
+  notes: string,
+  outletId?: string
 ): Promise<ApiShift> {
   return apiRequest<ApiShift>('/shifts/close', {
     method: 'POST',
-    body: JSON.stringify({ actualCash, notes }),
+    body: JSON.stringify({ actualCash, notes, outletId }),
   });
 }
 
 export async function addCashMovementWithApi(
   type: 'MASUK' | 'KELUAR',
   amount: number,
-  reason: string
+  reason: string,
+  shiftId?: string
 ): Promise<void> {
   await apiRequest('/shifts/cash-movement', {
     method: 'POST',
-    body: JSON.stringify({ type, amount, reason }),
+    body: JSON.stringify({ type, amount, reason, shiftId }),
   });
 }

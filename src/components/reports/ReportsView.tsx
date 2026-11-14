@@ -58,6 +58,7 @@ interface ReportsViewProps {
     password: string,
     reason: string
   ) => void | Promise<void>;
+  onEditTransaction?: (transaction: Transaction) => void;
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
@@ -75,6 +76,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   reportTab: controlledReportTab,
   onReportTabChange,
   onDeleteTransaction,
+  onEditTransaction,
 }) => {
   const [selectedOutletFilter, setSelectedOutletFilter] = useState<string>('ALL');
   const [internalReportTab, setInternalReportTab] = useState<ReportTab>('closing');
@@ -97,12 +99,13 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const [spvShiftFilter, setSpvShiftFilter] = useState<string>('ALL');
   const [voidingTx, setVoidingTx] = useState<Transaction | null>(null);
 
-  const handleRequestEdit = () => {
-    playBeep('error');
-    alert(
-      'Koreksi/edit transaksi belum didukung oleh server.\n\n' +
-        'Silakan void transaksi yang salah, lalu buat transaksi baru agar stok, poin, dan rekap shift tetap konsisten.'
-    );
+  const handleRequestEdit = (transaction: Transaction) => {
+    if (!onEditTransaction) {
+      playBeep('error');
+      alert('Fitur koreksi transaksi tidak tersedia pada sesi ini.');
+      return;
+    }
+    onEditTransaction(transaction);
   };
 
   // Batasi data laporan pada outlet yang berhak diakses user (fail-closed)
@@ -1087,7 +1090,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                                   <>
                                 <button
                                   type="button"
-                                  onClick={handleRequestEdit}
+                                  onClick={() => handleRequestEdit(t)}
                                   className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
                                   title="Koreksi Transaksi (Edit Item, Qty, Metode Bayar)"
                                 >

@@ -13,7 +13,7 @@ import { Outlet, User as PosUser, UserPermissions } from '../types/pos';
  * diambil dari `user.permissions`, dengan fallback ke default per role.
  */
 
-export type AppTab = 'pos' | 'master' | 'outlets' | 'reports' | 'users' | 'docs';
+export type AppTab = 'pos' | 'master' | 'outlets' | 'reports' | 'users';
 
 const DENY_ALL: UserPermissions = {
   canDiscount: false,
@@ -85,7 +85,6 @@ export const canAccessMasterData = (user?: PosUser | null): boolean =>
 
 export const canManageUsers = (user?: PosUser | null): boolean => isAdmin(user);
 export const canResetDatabase = (user?: PosUser | null): boolean => isAdmin(user);
-export const canViewDocs = (user?: PosUser | null): boolean => isAdmin(user);
 export const canManageOutlets = (user?: PosUser | null): boolean => isAdmin(user);
 export const canViewActivityLogs = (user?: PosUser | null): boolean =>
   isAdmin(user) || isSupervisor(user);
@@ -105,7 +104,6 @@ export function getAllowedTabs(user?: PosUser | null): AppTab[] {
   if (!isWarehouse(user)) tabs.push('pos');
   if (canAccessMasterData(user)) tabs.push('master');
   if (canViewReports(user)) tabs.push('reports');
-  if (canViewDocs(user)) tabs.push('docs');
   return tabs;
 }
 

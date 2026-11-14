@@ -6,6 +6,11 @@ import { asyncHandler } from './errors';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import customerRoutes from './routes/customers';
+import categoryRoutes from './routes/categories';
+import brandRoutes from './routes/brands';
+import outletRoutes from './routes/outlets';
+import userRoutes from './routes/users';
+import pointSettingsRoutes from './routes/settings';
 import posRoutes from './routes/pos';
 import shiftRoutes from './routes/shifts';
 import {
@@ -61,6 +66,11 @@ app.use('/api/v1/auth', authRoutes);
 
 app.use('/api/v1/products', authenticateJWT, productRoutes);
 app.use('/api/v1/customers', authenticateJWT, customerRoutes);
+app.use('/api/v1/categories', authenticateJWT, categoryRoutes);
+app.use('/api/v1/brands', authenticateJWT, brandRoutes);
+app.use('/api/v1/outlets', authenticateJWT, outletRoutes);
+app.use('/api/v1/users', authenticateJWT, userRoutes);
+app.use('/api/v1/point-settings', authenticateJWT, pointSettingsRoutes);
 app.use('/api/v1/pos', authenticateJWT, posRoutes);
 app.use('/api/v1/shifts', authenticateJWT, shiftRoutes);
 

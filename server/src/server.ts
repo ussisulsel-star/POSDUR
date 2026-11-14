@@ -1,15 +1,33 @@
 import app from './app';
 import { config } from './config';
 import { pool } from './db';
+import { runMigrations } from './migrate';
 
-const server = app.listen(config.port, () => {
-  console.log(
-    `VC3 Catat API berjalan di port ${config.port} (env: ${config.env}).`
-  );
-});
+let server: ReturnType<typeof app.listen> | null = null;
+
+async function start(): Promise<void> {
+  try {
+    await runMigrations();
+  } catch (error) {
+    console.error('[migrate] Startup dibatalkan:', (error as Error).message);
+    process.exit(1);
+  }
+
+  server = app.listen(config.port, () => {
+    console.log(
+      `VC3 Catat API berjalan di port ${config.port} (env: ${config.env}).`
+    );
+  });
+}
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`[${signal}] Menutup server dengan rapi...`);
+
+  if (!server) {
+    await pool.end().catch(() => undefined);
+    process.exit(0);
+    return;
+  }
 
   server.close(async () => {
     try {
@@ -40,3 +58,5 @@ process.on('unhandledRejection', (reason) => {
 process.on('uncaughtException', (error) => {
   console.error('[uncaughtException]', error);
 });
+
+void start();

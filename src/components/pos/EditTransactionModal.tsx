@@ -17,12 +17,13 @@ import {
 import { Transaction, CartItem, PaymentMethodType, PaymentDetail, EMoney, User as PosUser } from '../../types/pos';
 import { formatRupiah, playBeep } from '../../services/storageService';
 import { canVoid } from '../../services/accessControl';
+import type { TransactionCorrectionInput } from '../../services/posApi';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   transaction: Transaction;
-  onSaveTransaction: (updatedTx: Transaction) => void;
+  onSaveTransaction: (input: TransactionCorrectionInput) => Promise<void>;
   emoneyList?: EMoney[];
   currentUser?: PosUser | null;
 }
@@ -39,6 +40,9 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
   const [customerPhone, setCustomerPhone] = useState<string>(transaction.customerPhone || '');
   const [items, setItems] = useState<CartItem[]>([...transaction.items]);
   const [correctionReason, setCorrectionReason] = useState<string>('Koreksi jumlah barang oleh Supervisor');
+  const [password, setPassword] = useState<string>('');
+  const [saving, setSaving] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Payment method state
   const currentFirstPay = transaction.payments[0] || { method: 'TUNAI', amount: transaction.grandTotal };
@@ -70,14 +74,28 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
     setItems((prev) => prev.filter((_, idx) => idx !== index));
   };
 
-  // Recalculate totals
+  // Recalculate totals (mengikuti rumus server: diskon item + diskon faktur +
+  // nilai tukar poin yang sudah tercatat pada nota).
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
   const itemDiscounts = items.reduce((sum, item) => sum + item.discountRp * item.qty, 0);
-  const grandTotal = Math.max(0, subtotal - itemDiscounts);
+  const previousItemDiscounts = transaction.items.reduce(
+    (sum, item) => sum + item.discountRp * item.qty,
+    0
+  );
+  const pointDiscount = Math.max(0, transaction.pointDiscount || 0);
+  const invoiceDiscount = Math.max(
+    0,
+    (transaction.discountTotal || 0) - previousItemDiscounts - pointDiscount
+  );
+  const taxTotal = Math.max(0, transaction.taxTotal || 0);
+  const grandTotal = Math.max(
+    0,
+    subtotal - itemDiscounts - invoiceDiscount - pointDiscount + taxTotal
+  );
   const totalQty = items.reduce((sum, item) => sum + item.qty, 0);
 
   // Handle Save
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!canVoid(currentUser)) {
@@ -93,6 +111,16 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
 
     if (items.length === 0) {
       alert('Minimal harus ada 1 item barang dalam transaksi.');
+      return;
+    }
+
+    if (!password.trim()) {
+      alert('Masukkan password akun supervisor/admin untuk otorisasi koreksi.');
+      return;
+    }
+
+    if (grandTotal < 0) {
+      alert('Grand total hasil koreksi tidak boleh negatif.');
       return;
     }
 
@@ -130,29 +158,34 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
       });
     }
 
-    const spvName = currentUser?.name || 'Supervisor (SPV)';
-    const editTimestamp = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    const auditNote = `[Koreksi SPV: ${spvName} @ ${editTimestamp} - Alasan: ${correctionReason}]`;
+    setSaving(true);
+    setErrorMessage('');
 
-    const updatedTx: Transaction = {
-      ...transaction,
-      customerName,
-      customerPhone,
-      items,
-      itemCount: items.length,
-      totalQty,
-      subtotal,
-      discountTotal: itemDiscounts,
-      grandTotal,
-      payAmount: grandTotal,
-      changeAmount: 0,
-      payments: updatedPayments,
-      notes: transaction.notes ? `${transaction.notes} | ${auditNote}` : auditNote,
-    };
-
-    playBeep('success');
-    onSaveTransaction(updatedTx);
-    onClose();
+    try {
+      await onSaveTransaction({
+        password: password.trim(),
+        reason: correctionReason.trim(),
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim() || undefined,
+        taxTotal,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          discountRp: item.discountRp,
+        })),
+        payments: updatedPayments,
+      });
+      playBeep('success');
+      onClose();
+    } catch (error) {
+      playBeep('error');
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Koreksi transaksi gagal disimpan.'
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -350,6 +383,32 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Debit EDC</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setPayMethod('TRANSFER')}
+                className={`py-2 px-2.5 rounded-lg border font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  payMethod === 'TRANSFER'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>Transfer</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPayMethod('PIUTANG')}
+                className={`py-2 px-2.5 rounded-lg border font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                  payMethod === 'PIUTANG'
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Piutang</span>
+              </button>
             </div>
 
             {/* If QRIS selected, pick specific E-Money */}
@@ -408,21 +467,49 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
             />
           </div>
 
+          {/* Password re-authentication */}
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">
+              Password Otorisasi (akun Anda):
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Masukkan password supervisor / admin"
+              className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoComplete="current-password"
+              required
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Server memverifikasi ulang password sebelum koreksi diterapkan.
+            </p>
+          </div>
+
+          {errorMessage && (
+            <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           {/* Modal Actions */}
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors"
+              disabled={saving}
+              className="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold transition-colors disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
-              className="py-2 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-colors"
+              disabled={saving}
+              className="py-2 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-colors disabled:opacity-60"
             >
               <Save className="w-4 h-4" />
-              <span>Simpan Koreksi Transaksi</span>
+              <span>{saving ? 'Menyimpan...' : 'Simpan Koreksi Transaksi'}</span>
             </button>
           </div>
         </form>

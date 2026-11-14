@@ -1,6 +1,6 @@
 # VC3 Catat POS
 
-Aplikasi **Point of Sale (POS) multi-outlet** untuk kasir ritel: terminal kasir sentuh + barcode, shift kas, multi-pembayaran, retur, laporan, manajemen master data & pengguna, serta dokumentasi arsitektur.
+Aplikasi **Point of Sale (POS) multi-outlet** untuk kasir ritel: terminal kasir sentuh + barcode, shift kas, multi-pembayaran, retur, laporan, serta manajemen master data & pengguna.
 
 Proyek ini terdiri dari dua bagian:
 
@@ -8,10 +8,12 @@ Proyek ini terdiri dari dua bagian:
 |---|---|---|
 | Frontend | React 19, TypeScript, Vite 8, Tailwind CSS 4 | `src/` |
 | Backend API | Node.js, Express 4, TypeScript, PostgreSQL 16 | `server/` |
-| Database | PostgreSQL (12 tabel, multi-tenant) | `db/` |
+| Database | PostgreSQL (14 tabel, multi-tenant) | `db/` |
 | Deployment | Docker Compose + Nginx | `docker/` |
 
-> **Status integrasi:** login, katalog produk, pelanggan/member, checkout/nota, poin loyalitas, buka-tutup shift, riwayat shift, kas masuk/keluar, retur, dan void transaksi sudah memakai REST API (`src/services/apiService.ts` + `src/services/posApi.ts`). Master data lain (produk, pengguna, kategori, brand, cabang) serta koreksi/edit transaksi masih disimpan di `localStorage` (`src/services/storageService.ts`) dan menjadi tahap integrasi berikutnya. Koreksi transaksi sengaja ditampilkan sebagai "belum didukung"; gunakan void lalu buat nota baru agar stok, poin, dan rekap shift tetap konsisten.
+> **Status integrasi:** seluruh alur operasional sudah memakai REST API (`src/services/apiService.ts` + `src/services/posApi.ts`): login, katalog produk, pelanggan/member, checkout/nota, poin loyalitas (validasi di server), buka-tutup shift per cabang, riwayat shift, kas masuk/keluar, retur, void, serta koreksi transaksi. Master data produk, kategori, brand, cabang, pengguna, dan pengaturan poin juga disinkronkan ke server; `localStorage` hanya berfungsi sebagai cache tampilan awal. Migrasi `db/migrations/002_master_data.sql` dan seed `db/seeds/002_master_data.sql` diterapkan otomatis saat server/database lokal dijalankan.
+
+> **Deploy ke VPS (Ubuntu/Debian + PostgreSQL 16 native):** lihat [docs/DEPLOY-VPS.md](docs/DEPLOY-VPS.md) — termasuk skrip `scripts/setup-vps-db.sh` untuk membangun database (skema + seed 12 cabang/230 produk) dengan satu perintah.
 
 ---
 
@@ -266,6 +268,23 @@ Semua endpoint bisnis memerlukan header `Authorization: Bearer <token>` dan otom
 | `PUT` | `/api/v1/customers/:id` | `ADMIN`, `SUPERVISOR`, `KASIR` |
 | `DELETE` | `/api/v1/customers/:id` | `ADMIN` (ditolak bila punya riwayat transaksi) |
 
+### Master Data: Kategori, Brand, Cabang, Pengguna, Poin
+
+| Method | Endpoint | Akses |
+|---|---|---|
+| `GET/POST` | `/api/v1/categories` | baca: semua role; tulis: `ADMIN`, `GUDANG` |
+| `PUT/DELETE` | `/api/v1/categories/:id` | `ADMIN`, `GUDANG` (produk dipindah ke `cat-all`) |
+| `GET/POST` | `/api/v1/brands` | baca: semua role; tulis: `ADMIN` |
+| `PUT/DELETE` | `/api/v1/brands/:id` | `ADMIN` (hapus ditolak bila masih dipakai) |
+| `GET/POST` | `/api/v1/outlets` | baca: semua role; tulis: `ADMIN` |
+| `PUT/DELETE` | `/api/v1/outlets/:id` | `ADMIN` (hapus ditolak bila punya transaksi/shift/pengguna) |
+| `GET` | `/api/v1/users?search=&role=` | `ADMIN`, `SUPERVISOR` (tanpa hash password/PIN) |
+| `POST/PUT/DELETE` | `/api/v1/users`, `/api/v1/users/:id` | `ADMIN` (proteksi admin terakhir) |
+| `GET` | `/api/v1/point-settings` | semua role |
+| `PUT` | `/api/v1/point-settings` | `ADMIN` |
+
+Catatan keamanan: password dan PIN pengguna hanya disimpan sebagai hash bcrypt. Respons API memakai penanda `hasPin` dan tidak pernah mengirim nilai PIN asli.
+
 ### Penjualan
 
 | Method | Endpoint | Akses |
@@ -273,16 +292,19 @@ Semua endpoint bisnis memerlukan header `Authorization: Bearer <token>` dan otom
 | `POST` | `/api/v1/pos/checkout` | semua role |
 | `GET` | `/api/v1/pos/transactions?from=&to=&status=&invoiceNo=` | semua role |
 | `GET` | `/api/v1/pos/transactions/:invoiceNo` | semua role |
+| `PUT` | `/api/v1/pos/transactions/:id` | `ADMIN`, `SUPERVISOR` (koreksi item/qty/bayar, wajib `password` + `reason`) |
 | `POST` | `/api/v1/pos/transactions/:id/void` | `ADMIN`, `SUPERVISOR` (wajib `password` akun sendiri) |
 | `POST` | `/api/v1/pos/returns` | `ADMIN`, `SUPERVISOR` |
+
+Koreksi transaksi menghitung ulang stok, poin member, dan agregat kas shift dalam satu transaksi database. Nilai tukar poin divalidasi di server (program aktif, periode berlaku, minimal poin, dan saldo poin pelanggan).
 
 ### Shift & Kas
 
 | Method | Endpoint | Akses |
 |---|---|---|
-| `GET` | `/api/v1/shifts?status=&limit=&offset=` | semua role (non-admin hanya shift sendiri) |
-| `GET` | `/api/v1/shifts/active` | semua role (`?all=true` untuk ADMIN) |
-| `POST` | `/api/v1/shifts/open` | semua role |
+| `GET` | `/api/v1/shifts?status=&outletId=&limit=&offset=` | semua role (non-admin hanya shift sendiri) |
+| `GET` | `/api/v1/shifts/active?outletId=` | semua role (`?all=true` untuk ADMIN) |
+| `POST` | `/api/v1/shifts/open` | semua role (body `outletId` opsional) |
 | `POST` | `/api/v1/shifts/close` | semua role |
 | `POST` | `/api/v1/shifts/cash-movement` | semua role |
 | `GET` | `/api/v1/shifts/:id/movements` | semua role |
@@ -330,18 +352,19 @@ Catatan perilaku backend:
 - Stok dikunci dengan `SELECT ... FOR UPDATE` sehingga aman dari overselling.
 - Nota otomatis masuk ke rekap shift aktif kasir (kas tunai = grand total − pembayaran non-tunai).
 - Retur mengembalikan stok dan mencatat refund tunai sebagai kas keluar shift.
-- Skema DB saat ini **belum** memiliki `outlet_id`; isolasi data backend berbasis `company_id`. Multi-outlet masih berjalan di sisi frontend/localStorage.
+- `outlet_id` tersimpan pada nota dan shift sehingga rekap per cabang serta pembatasan akses pengguna berlaku nyata di backend.
+- Poin member dihitung dari `point_settings.product_points`, sedangkan penukaran poin divalidasi ulang (status program, periode aktif, minimal poin, nilai tukar, dan saldo pelanggan).
 
 ---
 
 ## Role & Kewenangan
 
-| Role | POS | Master Data | Laporan | Dokumentasi | Void/Retur/Diskon |
-|---|---|---|---|---|---|
-| `ADMIN` | ✅ | ✅ (edit) | ✅ | ✅ | ✅ |
-| `SUPERVISOR` | ✅ | ✅ (baca) | ✅ | ❌ | ✅ |
-| `KASIR` | ✅ | ❌ | ❌ | ❌ | hanya buka laci |
-| `GUDANG` | ❌ | ✅ (produk/kategori) | ❌ | ❌ | ❌ |
+| Role | POS | Master Data | Laporan | Void/Retur/Diskon |
+|---|---|---|---|---|
+| `ADMIN` | ✅ | ✅ (edit) | ✅ | ✅ |
+| `SUPERVISOR` | ✅ | ✅ (baca) | ✅ | ✅ |
+| `KASIR` | ✅ | ❌ | ❌ | hanya buka laci |
+| `GUDANG` | ❌ | ✅ (produk/kategori) | ❌ | ❌ |
 
 Detail aturan ada di `src/services/accessControl.ts` (frontend) dan `requireRole` pada route backend.
 

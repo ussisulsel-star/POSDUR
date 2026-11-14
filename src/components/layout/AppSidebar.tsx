@@ -9,7 +9,6 @@ import {
   FileText,
   HelpCircle,
   History,
-  Layers,
   Maximize2,
   Minimize2,
   PauseCircle,
@@ -19,7 +18,14 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
-import { AppTab, canAccessMasterData, canAccessTab, canOpenDrawer, canReturn, canViewDocs, canViewReports } from '../../services/accessControl';
+import {
+  AppTab,
+  canAccessMasterData,
+  canAccessTab,
+  canOpenDrawer,
+  canReturn,
+  canViewReports,
+} from '../../services/accessControl';
 import { getAllowedMasterTabs, type MasterTab } from '../master/masterTabs';
 import { REPORT_TABS, type ReportTab } from '../reports/reportTabs';
 import { User as PosUser } from '../../types/pos';
@@ -433,16 +439,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               </>
             )}
 
-            {canViewDocs(user) && (
-              <NavButton
-                icon={Layers}
-                label="Arsitektur & API"
-                collapsed={collapsed}
-                active={activeTab === 'docs'}
-                accent="emerald"
-                onClick={() => setActiveTab('docs')}
-              />
-            )}
           </div>
 
           {posAccess && (

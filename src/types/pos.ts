@@ -152,7 +152,8 @@ export function toBrandConfig(brand: Brand): BrandConfig {
   return {
     name: brand.name,
     tagline: brand.tagline,
-    emoji: brand.emoji,
+    // Seed server sengaja ASCII (tanpa emoji), jadi beri ikon netral bila kosong.
+    emoji: brand.emoji?.trim() || '🏷️',
     ...preset,
   };
 }
@@ -236,6 +237,8 @@ export interface User {
   pin?: string;
   password?: string;
   phone?: string;
+  /** True bila server menyimpan PIN (hash tidak pernah dikirim ke klien). */
+  hasPin?: boolean;
   isActive?: boolean;
   lastLogin?: string;
   permissions?: UserPermissions;

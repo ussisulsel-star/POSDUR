@@ -17,38 +17,61 @@ import {
 const router = Router();
 
 const SHIFT_SELECT = `
-  SELECT s.*, u.name AS cashier_name
+  SELECT s.*, u.name AS cashier_name, o.name AS outlet_name
     FROM pos_shifts s
     JOIN users u ON u.id = s.cashier_id
+    LEFT JOIN outlets o ON o.id = s.outlet_id
 `;
 
 /**
- * GET /api/v1/shifts/active?all=true
+ * GET /api/v1/shifts/active?all=true&outletId=
  * Shift OPEN milik kasir yang sedang login (ADMIN dapat melihat semua).
+ * `outletId` opsional untuk membatasi rekap ke satu cabang.
  */
 router.get(
   '/active',
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const showAll = readQueryString(req.query.all) === 'true';
+    const outletId = readQueryString(req.query.outletId) || null;
 
     if (showAll && req.user!.role === 'ADMIN') {
+      const params: unknown[] = [companyId];
+      const conditions = ["s.company_id = $1", "s.status = 'OPEN'"];
+
+      if (outletId) {
+        params.push(outletId);
+        conditions.push(`s.outlet_id = $${params.length}`);
+      }
+
       const { rows } = await query(
         `${SHIFT_SELECT}
-          WHERE s.company_id = $1 AND s.status = 'OPEN'
+          WHERE ${conditions.join(' AND ')}
           ORDER BY s.start_time DESC`,
-        [companyId]
+        params
       );
       res.json({ success: true, data: rows.map(mapShift) });
       return;
     }
 
+    const params: unknown[] = [companyId, req.user!.id];
+    const conditions = [
+      's.company_id = $1',
+      's.cashier_id = $2',
+      "s.status = 'OPEN'",
+    ];
+
+    if (outletId) {
+      params.push(outletId);
+      conditions.push(`s.outlet_id = $${params.length}`);
+    }
+
     const { rows } = await query(
       `${SHIFT_SELECT}
-        WHERE s.company_id = $1 AND s.cashier_id = $2 AND s.status = 'OPEN'
+        WHERE ${conditions.join(' AND ')}
         ORDER BY s.start_time DESC
         LIMIT 1`,
-      [companyId, req.user!.id]
+      params
     );
 
     res.json({
@@ -60,7 +83,7 @@ router.get(
 
 /**
  * POST /api/v1/shifts/open
- * Body: { initialCash, notes? }
+ * Body: { initialCash, notes?, outletId? }
  */
 router.post(
   '/open',
@@ -73,20 +96,42 @@ router.post(
       fallback: 0,
     });
     const notes = optionalString(body.notes, 'notes', 1000);
+    const outletId = optionalString(body.outletId, 'outletId', 50);
 
     const result = await withTransaction(async (client) => {
+      // Pastikan cabang yang dipilih memang milik tenant ini.
+      if (outletId) {
+        const outletResult = await client.query(
+          `SELECT id FROM outlets
+            WHERE company_id = $1 AND id = $2 AND is_active = TRUE
+            LIMIT 1`,
+          [companyId, outletId]
+        );
+        if (outletResult.rows.length === 0) {
+          throw new ApiError(422, 'Cabang tidak ditemukan atau sedang nonaktif.');
+        }
+      }
+
+      const existingParams: unknown[] = [companyId, req.user!.id];
+      let outletCondition = '';
+
+      if (outletId) {
+        existingParams.push(outletId);
+        outletCondition = ` AND (outlet_id IS NULL OR outlet_id = $${existingParams.length})`;
+      }
+
       const existing = await client.query(
-        `SELECT id
+        `SELECT id, outlet_id
            FROM pos_shifts
-          WHERE company_id = $1 AND cashier_id = $2 AND status = 'OPEN'
+          WHERE company_id = $1 AND cashier_id = $2 AND status = 'OPEN'${outletCondition}
           FOR UPDATE`,
-        [companyId, req.user!.id]
+        existingParams
       );
 
       if (existing.rows.length > 0) {
         throw new ApiError(
           409,
-          'Masih ada shift yang terbuka. Tutup shift tersebut terlebih dahulu.'
+          'Masih ada shift yang terbuka di cabang ini. Tutup shift tersebut terlebih dahulu.'
         );
       }
 
@@ -101,12 +146,12 @@ router.post(
 
       const insertResult = await client.query(
         `INSERT INTO pos_shifts
-           (company_id, shift_number, cashier_id, initial_cash,
+           (company_id, shift_number, cashier_id, outlet_id, initial_cash,
             total_cash_sales, total_non_cash_sales, total_cash_in,
             total_cash_out, expected_cash, status, notes)
-         VALUES ($1, $2, $3, $4, 0, 0, 0, 0, $4, 'OPEN', $5)
+         VALUES ($1, $2, $3, $4, $5, 0, 0, 0, 0, $5, 'OPEN', $6)
          RETURNING *`,
-        [companyId, shiftNumber, req.user!.id, initialCash, notes]
+        [companyId, shiftNumber, req.user!.id, outletId, initialCash, notes]
       );
 
       return insertResult.rows[0];
@@ -124,7 +169,7 @@ router.post(
 
 /**
  * POST /api/v1/shifts/close
- * Body: { actualCash, notes? }
+ * Body: { actualCash, notes?, outletId? }
  */
 router.post(
   '/close',
@@ -134,16 +179,25 @@ router.post(
 
     const actualCash = parseMoney(body.actualCash, 'actualCash', { min: 0 });
     const notes = optionalString(body.notes, 'notes', 1000);
+    const outletId = optionalString(body.outletId, 'outletId', 50);
 
     const result = await withTransaction(async (client) => {
+      const shiftParams: unknown[] = [companyId, req.user!.id];
+      let outletCondition = '';
+
+      if (outletId) {
+        shiftParams.push(outletId);
+        outletCondition = ` AND (outlet_id IS NULL OR outlet_id = $${shiftParams.length})`;
+      }
+
       const shiftResult = await client.query(
         `SELECT *
            FROM pos_shifts
-          WHERE company_id = $1 AND cashier_id = $2 AND status = 'OPEN'
+          WHERE company_id = $1 AND cashier_id = $2 AND status = 'OPEN'${outletCondition}
           ORDER BY start_time DESC
           LIMIT 1
           FOR UPDATE`,
-        [companyId, req.user!.id]
+        shiftParams
       );
 
       if (shiftResult.rows.length === 0) {
@@ -335,7 +389,7 @@ router.post(
 );
 
 /**
- * GET /api/v1/shifts?status=&limit=&offset=
+ * GET /api/v1/shifts?status=&outletId=&limit=&offset=
  * Riwayat shift (default: semua status). Non-admin hanya melihat shift sendiri.
  */
 router.get(
@@ -343,6 +397,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const companyId = req.user!.companyId;
     const status = readQueryString(req.query.status).toUpperCase();
+    const outletId = readQueryString(req.query.outletId) || null;
     const limit = parseInteger(req.query.limit, 'limit', {
       min: 1,
       max: 100,
@@ -363,6 +418,11 @@ router.get(
     if (status) {
       params.push(status);
       conditions.push(`s.status = $${params.length}`);
+    }
+
+    if (outletId) {
+      params.push(outletId);
+      conditions.push(`s.outlet_id = $${params.length}`);
     }
 
     if (req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPERVISOR') {
