@@ -19,7 +19,7 @@ interface PaymentModalProps {
   totalAmount: number;
   customer: Customer;
   emoneyList?: EMoney[];
-  onProcessPayment: (payments: PaymentDetail[], payAmount: number, changeAmount: number, shouldPrint: boolean) => void;
+  onProcessPayment: (payments: PaymentDetail[], payAmount: number, changeAmount: number, shouldPrint: boolean) => void | Promise<void>;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -33,6 +33,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [method, setMethod] = useState<PaymentMethodType>('TUNAI');
   const [cashTendered, setCashTendered] = useState<number>(totalAmount);
   const [shouldPrint, setShouldPrint] = useState<boolean>(true);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   // E-Money / QRIS state
   const activeEMoney = emoneyList.filter((em) => em.isActive);
@@ -57,8 +58,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const isCashInsufficient = method === 'TUNAI' && cashTendered < totalAmount;
 
   // Handle Complete
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isProcessing) return;
 
     if (method === 'TUNAI' && isCashInsufficient) {
       playBeep('error');
@@ -111,7 +114,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
 
     playBeep('success');
-    onProcessPayment(payments, method === 'TUNAI' ? cashTendered : totalAmount, changeAmount, shouldPrint);
+    setIsProcessing(true);
+    try {
+      await onProcessPayment(
+        payments,
+        method === 'TUNAI' ? cashTendered : totalAmount,
+        changeAmount,
+        shouldPrint
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Quick cash presets
@@ -535,11 +548,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             <button
               type="submit"
-              disabled={method === 'TUNAI' && isCashInsufficient}
+              disabled={(method === 'TUNAI' && isCashInsufficient) || isProcessing}
               className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              <span>Selesaikan Transaksi (Enter)</span>
+              <span>{isProcessing ? 'Menyimpan...' : 'Selesaikan Transaksi (Enter)'}</span>
             </button>
           </div>
         </form>

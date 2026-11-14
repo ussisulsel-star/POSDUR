@@ -11,7 +11,7 @@ Proyek ini terdiri dari dua bagian:
 | Database | PostgreSQL (12 tabel, multi-tenant) | `db/` |
 | Deployment | Docker Compose + Nginx | `docker/` |
 
-> **Status integrasi:** login, katalog produk, checkout/nota, buka-tutup shift, kas masuk/keluar, dan retur sudah memakai REST API (`src/services/apiService.ts` + `src/services/posApi.ts`). Master data lain (produk, pengguna, pelanggan, kategori, cabang) serta koreksi/void transaksi masih disimpan di `localStorage` (`src/services/storageService.ts`) dan menjadi tahap integrasi berikutnya.
+> **Status integrasi:** login, katalog produk, pelanggan/member, checkout/nota, poin loyalitas, buka-tutup shift, riwayat shift, kas masuk/keluar, retur, dan void transaksi sudah memakai REST API (`src/services/apiService.ts` + `src/services/posApi.ts`). Master data lain (produk, pengguna, kategori, brand, cabang) serta koreksi/edit transaksi masih disimpan di `localStorage` (`src/services/storageService.ts`) dan menjadi tahap integrasi berikutnya. Koreksi transaksi sengaja ditampilkan sebagai "belum didukung"; gunakan void lalu buat nota baru agar stok, poin, dan rekap shift tetap konsisten.
 
 ---
 
@@ -68,7 +68,7 @@ Proyek ini terdiri dari dua bagian:
 │       ├── db.ts                           # pool & helper transaksi
 │       ├── errors.ts                       # ApiError + asyncHandler
 │       ├── middleware/                     # auth JWT, rate limit, error handler
-│       ├── routes/                         # auth, products, pos, shifts
+│       ├── routes/                         # auth, products, customers, pos, shifts
 │       └── utils/                          # validasi & serializer camelCase
 ├── src/                                    # aplikasi React
 ├── .env.example
@@ -257,6 +257,15 @@ Semua endpoint bisnis memerlukan header `Authorization: Bearer <token>` dan otom
 | `PUT` | `/api/v1/products/:id` | `ADMIN`, `GUDANG` |
 | `DELETE` | `/api/v1/products/:id` | `ADMIN`, `GUDANG` (soft delete) |
 
+### Pelanggan / Member
+
+| Method | Endpoint | Akses |
+|---|---|---|
+| `GET` | `/api/v1/customers?search=&limit=&offset=` | semua role |
+| `POST` | `/api/v1/customers` | `ADMIN`, `SUPERVISOR`, `KASIR` |
+| `PUT` | `/api/v1/customers/:id` | `ADMIN`, `SUPERVISOR`, `KASIR` |
+| `DELETE` | `/api/v1/customers/:id` | `ADMIN` (ditolak bila punya riwayat transaksi) |
+
 ### Penjualan
 
 | Method | Endpoint | Akses |
@@ -264,12 +273,14 @@ Semua endpoint bisnis memerlukan header `Authorization: Bearer <token>` dan otom
 | `POST` | `/api/v1/pos/checkout` | semua role |
 | `GET` | `/api/v1/pos/transactions?from=&to=&status=&invoiceNo=` | semua role |
 | `GET` | `/api/v1/pos/transactions/:invoiceNo` | semua role |
+| `POST` | `/api/v1/pos/transactions/:id/void` | `ADMIN`, `SUPERVISOR` (wajib `password` akun sendiri) |
 | `POST` | `/api/v1/pos/returns` | `ADMIN`, `SUPERVISOR` |
 
 ### Shift & Kas
 
 | Method | Endpoint | Akses |
 |---|---|---|
+| `GET` | `/api/v1/shifts?status=&limit=&offset=` | semua role (non-admin hanya shift sendiri) |
 | `GET` | `/api/v1/shifts/active` | semua role (`?all=true` untuk ADMIN) |
 | `POST` | `/api/v1/shifts/open` | semua role |
 | `POST` | `/api/v1/shifts/close` | semua role |

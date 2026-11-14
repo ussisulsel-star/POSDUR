@@ -6,11 +6,17 @@ import { loginWithApi } from '../../services/posApi';
 
 interface LoginPageProps {
   onLoginSuccess: (user: PosUser, token: string) => void | Promise<void>;
+  initialCompanyId?: string;
+  initialUserId?: string;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [companyId, setCompanyId] = useState<string>('001');
-  const [userId, setUserId] = useState<string>('001');
+export const LoginPage: React.FC<LoginPageProps> = ({
+  onLoginSuccess,
+  initialCompanyId,
+  initialUserId,
+}) => {
+  const [companyId, setCompanyId] = useState<string>(initialCompanyId ?? '001');
+  const [userId, setUserId] = useState<string>(initialUserId ?? '001');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);

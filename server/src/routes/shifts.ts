@@ -7,6 +7,7 @@ import {
   isUuid,
   optionalString,
   optionalUuid,
+  parseInteger,
   parseMoney,
   readQueryString,
   requireString,
@@ -330,6 +331,54 @@ router.post(
     });
 
     res.status(201).json({ success: true, data: mapCashMovement(result) });
+  })
+);
+
+/**
+ * GET /api/v1/shifts?status=&limit=&offset=
+ * Riwayat shift (default: semua status). Non-admin hanya melihat shift sendiri.
+ */
+router.get(
+  '/',
+  asyncHandler(async (req, res) => {
+    const companyId = req.user!.companyId;
+    const status = readQueryString(req.query.status).toUpperCase();
+    const limit = parseInteger(req.query.limit, 'limit', {
+      min: 1,
+      max: 100,
+      fallback: 20,
+    });
+    const offset = parseInteger(req.query.offset, 'offset', {
+      min: 0,
+      fallback: 0,
+    });
+
+    if (status && status !== 'OPEN' && status !== 'CLOSED') {
+      throw new ApiError(400, "status harus 'OPEN' atau 'CLOSED'.");
+    }
+
+    const params: unknown[] = [companyId];
+    const conditions = ['s.company_id = $1'];
+
+    if (status) {
+      params.push(status);
+      conditions.push(`s.status = $${params.length}`);
+    }
+
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'SUPERVISOR') {
+      params.push(req.user!.id);
+      conditions.push(`s.cashier_id = $${params.length}`);
+    }
+
+    const { rows } = await query(
+      `${SHIFT_SELECT}
+        WHERE ${conditions.join(' AND ')}
+        ORDER BY s.start_time DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      [...params, limit, offset]
+    );
+
+    res.json({ success: true, data: rows.map(mapShift) });
   })
 );
 

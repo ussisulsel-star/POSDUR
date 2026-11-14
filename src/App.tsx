@@ -23,10 +23,17 @@ import {
   addCashMovementWithApi,
   checkoutWithApi,
   closeShiftWithApi,
+  createCustomer,
+  deleteCustomer,
   loadCorePosData,
+  loadCustomers,
+  loadShiftHistory,
   openShiftWithApi,
   returnWithApi,
+  updateCustomer,
+  voidTransactionWithApi,
 } from './services/posApi';
+import type { CustomerInput } from './services/posApi';
 import { ApiError } from './services/apiService';
 import {
   AppTab,
@@ -66,6 +73,21 @@ import type { ReportTab } from './components/reports/reportTabs';
 import { ArchitectureDocsView } from './components/docs/ArchitectureDocsView';
 import { Outlet, StockTransfer } from './types/pos';
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const isPersistedCustomerId = (id: string): boolean => UUID_PATTERN.test(id);
+
+const WALK_IN_CUSTOMER: Customer = {
+  id: 'cust-umum',
+  code: 'PLG-0000',
+  name: 'Umum (Walk-in)',
+  phone: '-',
+  tier: 'UMUM',
+  discountPercent: 0,
+  points: 0,
+};
+
 export default function App() {
   // Authentication & session
   const [user, setUser] = useState<PosUser | null>(() => StorageService.getUser());
@@ -91,15 +113,7 @@ export default function App() {
   const [users, setUsers] = useState<PosUser[]>(() => StorageService.getUsers());
   const [selectedCustomer, setSelectedCustomer] = useState<Customer>(() => {
     const list = StorageService.getCustomers();
-    return list[0] || {
-      id: 'cust-umum',
-      code: 'PLG-0000',
-      name: 'Umum (Walk-in)',
-      phone: '-',
-      tier: 'UMUM',
-      discountPercent: 0,
-      points: 0,
-    };
+    return list.find((customer) => customer.tier === 'UMUM') || WALK_IN_CUSTOMER;
   });
 
   // Cart & Pricing states
@@ -110,7 +124,7 @@ export default function App() {
 
   // Shift & Held orders states
   const [activeShift, setActiveShift] = useState<Shift | null>(() => StorageService.getActiveShift());
-  const [shiftHistory, setShiftHistory] = useState<Shift[]>(() => StorageService.getShiftHistory());
+  const [shiftHistory, setShiftHistory] = useState<Shift[]>([]);
   const [heldOrders, setHeldOrders] = useState<HeldTransaction[]>(() => StorageService.getHeldOrders());
   const [transactions, setTransactions] = useState<Transaction[]>(() => StorageService.getTransactions());
 
@@ -128,6 +142,9 @@ export default function App() {
   const [redeemModalOpen, setRedeemModalOpen] = useState<boolean>(false);
   const [redeemPoints, setRedeemPoints] = useState<number>(0);
   const [logoutModalOpen, setLogoutModalOpen] = useState<boolean>(false);
+  const [loginPrefill, setLoginPrefill] = useState<{ companyId: string; userId: string } | null>(
+    null
+  );
 
   // Barcode input ref for keyboard focus
   const barcodeInputRef = useRef<HTMLInputElement | null>(null);
@@ -141,6 +158,15 @@ export default function App() {
     const rand = Math.floor(1000 + Math.random() * 9000);
     return `PJ-${yearMonth}-${rand}`;
   }
+
+  // Bersihkan state sementara POS saat sesi berakhir / berganti pengguna.
+  const resetTransientPosState = () => {
+    setCart([]);
+    setRedeemPoints(0);
+    setInvoiceDiscountPercent(0);
+    setSelectedCustomer(WALK_IN_CUSTOMER);
+    setInvoiceNo(generateInvoiceNo());
+  };
 
   // Keyboard shortcut event listener (F1 - F12, Escape)
   useEffect(() => {
@@ -494,10 +520,17 @@ export default function App() {
     };
 
     let savedTransaction: { id: string; shiftId: string | null };
+    const persistedCustomerId =
+      selectedCustomer.tier !== 'UMUM' && isPersistedCustomerId(selectedCustomer.id)
+        ? selectedCustomer.id
+        : undefined;
     try {
       savedTransaction = await checkoutWithApi({
         invoiceNo,
         customerName: selectedCustomer.name,
+        ...(persistedCustomerId
+          ? { customerId: persistedCustomerId, pointsRedeemed: appliedRedeemPoints }
+          : {}),
         ...(activeShift ? { shiftId: activeShift.id } : {}),
         items: cart.map((item) => ({
           productId: item.product.id,
@@ -538,6 +571,7 @@ export default function App() {
     try {
       const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
       setProducts(coreData.products);
+      setCustomers(coreData.customers);
       setActiveShift(coreData.activeShift);
       setTransactions(coreData.transactions);
     } catch (error) {
@@ -660,35 +694,132 @@ export default function App() {
   };
 
   // Customer registration
-  const handleAddCustomer = (newCustomer: Customer) => {
-    const updated = [newCustomer, ...customers];
-    StorageService.saveCustomers(updated);
-    setCustomers(updated);
-    setSelectedCustomer(newCustomer);
+  const handleAddCustomer = async (newCustomer: Customer): Promise<boolean> => {
+    const created = await createCustomer({
+      code: newCustomer.code,
+      name: newCustomer.name,
+      phone: newCustomer.phone === '-' ? undefined : newCustomer.phone,
+      tier: newCustomer.tier,
+      discountPercent: newCustomer.discountPercent,
+      points: newCustomer.points,
+      address: newCustomer.address,
+    });
+    setCustomers((current) => [created, ...current]);
+    setSelectedCustomer(created);
+    return true;
   };
 
-  // Database Reset
-  const handleResetDatabase = () => {
+  // Sinkronisasi perubahan massal pelanggan (master data / pengaturan tier).
+  const handleUpdateCustomers = async (nextCustomers: Customer[]) => {
+    try {
+      const previousById = new Map(customers.map((customer) => [customer.id, customer]));
+      const nextIds = new Set(nextCustomers.map((customer) => customer.id));
+
+      for (const customer of nextCustomers) {
+        const previous = previousById.get(customer.id);
+
+        if (!previous) {
+          await createCustomer({
+            code: customer.code,
+            name: customer.name,
+            phone: customer.phone === '-' ? undefined : customer.phone,
+            tier: customer.tier,
+            discountPercent: customer.discountPercent,
+            points: customer.points,
+            address: customer.address,
+          });
+          continue;
+        }
+
+        if (!isPersistedCustomerId(customer.id)) continue;
+
+        // Kirim hanya field yang berubah agar poin hasil transaksi tidak
+        // tertimpa nilai lama dari layar master data.
+        const changes: Partial<CustomerInput> = {};
+        if (previous.code !== customer.code) changes.code = customer.code;
+        if (previous.name !== customer.name) changes.name = customer.name;
+        if (previous.phone !== customer.phone && customer.phone) {
+          changes.phone = customer.phone;
+        }
+        if (previous.tier !== customer.tier) changes.tier = customer.tier;
+        if (previous.discountPercent !== customer.discountPercent) {
+          changes.discountPercent = customer.discountPercent;
+        }
+        if (previous.points !== customer.points) changes.points = customer.points;
+        if (previous.address !== customer.address && customer.address) {
+          changes.address = customer.address;
+        }
+
+        if (Object.keys(changes).length > 0) {
+          await updateCustomer(customer.id, changes);
+        }
+      }
+
+      for (const customer of customers) {
+        if (
+          isPersistedCustomerId(customer.id) &&
+          !nextIds.has(customer.id)
+        ) {
+          await deleteCustomer(customer.id);
+        }
+      }
+
+      setCustomers(await loadCustomers());
+    } catch (error) {
+      playBeep('error');
+      alert(
+        `Perubahan pelanggan gagal disimpan ke server: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+      try {
+        setCustomers(await loadCustomers());
+      } catch {
+        // Biarkan data yang ada bila server juga tidak dapat dihubungi.
+      }
+    }
+  };
+
+  // Database Reset (hanya untuk data lokal: pengaturan, kategori, brand, user)
+  const handleResetDatabase = async () => {
     if (!isAdmin(user)) {
       playBeep('error');
       alert('Hanya Administrator yang boleh mereset database.');
       return;
     }
     StorageService.resetDatabase();
-    setProducts(StorageService.getProducts());
     setCategories(StorageService.getCategories());
     setBrands(StorageService.getBrands());
-    setCustomers(StorageService.getCustomers());
     setPointSettings(StorageService.getPointSettings());
     setUsers(StorageService.getUsers());
     setEMoneyList(StorageService.getEMoney());
-    setCart([]);
-    setRedeemPoints(0);
-    setTransactions([]);
     setHeldOrders([]);
-    setActiveShift(StorageService.getActiveShift());
-    setShiftHistory([]);
-    alert('Database berhasil di-reset ke sample data ritel awal.');
+    resetTransientPosState();
+
+    try {
+      const [coreData, history] = await Promise.all([
+        loadCorePosData(activeOutlet.id, activeOutlet.name),
+        loadShiftHistory(),
+      ]);
+      setProducts(coreData.products);
+      setCustomers(coreData.customers);
+      setActiveShift(coreData.activeShift);
+      setTransactions(coreData.transactions);
+      setShiftHistory(
+        history.map((shift) => ({
+          ...shift,
+          outletId: activeOutlet.id,
+          outletName: activeOutlet.name,
+        }))
+      );
+      alert('Data lokal berhasil di-reset dan data POS dimuat ulang dari server.');
+    } catch (error) {
+      alert(
+        `Data lokal sudah di-reset, tetapi data server gagal dimuat: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
   };
 
   // Check and enforce outlet authorization for a user (fail-closed)
@@ -714,6 +845,7 @@ export default function App() {
     try {
       const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
       setProducts(coreData.products);
+      setCustomers(coreData.customers);
       setActiveShift(coreData.activeShift);
       setTransactions(coreData.transactions);
     } catch (error) {
@@ -722,7 +854,22 @@ export default function App() {
       throw error;
     }
 
+    void loadShiftHistory()
+      .then((history) =>
+        setShiftHistory(
+          history.map((shift) => ({
+            ...shift,
+            outletId: activeOutlet.id,
+            outletName: activeOutlet.name,
+          }))
+        )
+      )
+      .catch(() => {
+        // Riwayat shift tidak boleh menghalangi login.
+      });
+
     hydratedUserIdRef.current = loggedUser.id;
+    setLoginPrefill(null);
     setUser(loggedUser);
     setActiveTab(getDefaultTab(loggedUser));
     const validOutlet = enforceOutletAuthorization(loggedUser, activeOutlet);
@@ -731,36 +878,56 @@ export default function App() {
     }
   };
 
-  const handleSwitchUser = (_newUser: PosUser) => {
+  const handleSwitchUser = (newUser: PosUser) => {
     hydratedUserIdRef.current = null;
     StorageService.setUser(null);
+    resetTransientPosState();
+    setLoginPrefill({
+      companyId: newUser.companyId,
+      userId: newUser.userId,
+    });
     setUser(null);
     setActiveTab('pos');
   };
 
-  // Handle Supervisor Transaction Corrections and Deletions
-  const handleUpdateTransaction = (updatedTx: Transaction) => {
+  // Void transaksi langsung ke server agar stok, poin, dan rekap shift ikut
+  // dikembalikan. Koreksi/edit nota belum didukung backend.
+  const handleDeleteTransaction = async (
+    txId: string,
+    password: string,
+    reason: string
+  ) => {
     if (!canVoid(user)) {
       playBeep('error');
-      alert('Akun Anda tidak memiliki kewenangan mengoreksi transaksi.');
-      return;
+      throw new Error('Akun Anda tidak memiliki kewenangan menghapus / void transaksi.');
     }
-    StorageService.updateTransaction(updatedTx);
-    setTransactions(StorageService.getTransactions());
-    setActiveShift(StorageService.getActiveShift());
-    playBeep('success');
-  };
 
-  const handleDeleteTransaction = (txId: string) => {
-    if (!canVoid(user)) {
-      playBeep('error');
-      alert('Akun Anda tidak memiliki kewenangan menghapus / void transaksi.');
-      return;
-    }
-    StorageService.deleteTransaction(txId);
-    setTransactions(StorageService.getTransactions());
-    setActiveShift(StorageService.getActiveShift());
+    await voidTransactionWithApi(txId, password, reason);
     playBeep('delete');
+
+    try {
+      const [coreData, history] = await Promise.all([
+        loadCorePosData(activeOutlet.id, activeOutlet.name),
+        loadShiftHistory(),
+      ]);
+      setProducts(coreData.products);
+      setCustomers(coreData.customers);
+      setActiveShift(coreData.activeShift);
+      setTransactions(coreData.transactions);
+      setShiftHistory(
+        history.map((shift) => ({
+          ...shift,
+          outletId: activeOutlet.id,
+          outletName: activeOutlet.name,
+        }))
+      );
+    } catch (error) {
+      alert(
+        `Transaksi sudah di-void di server, tetapi data layar gagal diperbarui: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    }
   };
 
   const handleLogout = () => {
@@ -770,6 +937,8 @@ export default function App() {
   const handleConfirmLogout = () => {
     playBeep('delete');
     hydratedUserIdRef.current = null;
+    setLoginPrefill(null);
+    resetTransientPosState();
     StorageService.setUser(null);
     setUser(null);
     setActiveTab('pos');
@@ -804,8 +973,24 @@ export default function App() {
         const coreData = await loadCorePosData(activeOutlet.id, activeOutlet.name);
         if (cancelled) return;
         setProducts(coreData.products);
+        setCustomers(coreData.customers);
         setActiveShift(coreData.activeShift);
         setTransactions(coreData.transactions);
+
+        void loadShiftHistory()
+          .then((history) => {
+            if (cancelled) return;
+            setShiftHistory(
+              history.map((shift) => ({
+                ...shift,
+                outletId: activeOutlet.id,
+                outletName: activeOutlet.name,
+              }))
+            );
+          })
+          .catch(() => {
+            // Riwayat shift tidak boleh menghalangi pemulihan sesi.
+          });
       } catch (error) {
         if (cancelled) return;
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -828,9 +1013,33 @@ export default function App() {
     };
   }, [user, activeOutlet.id, activeOutlet.name]);
 
+  // Sesi kedaluwarsa di tengah pemakaian: API mengirim 401, paksa login ulang.
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      const hadSession = Boolean(StorageService.getUser());
+      hydratedUserIdRef.current = null;
+      resetTransientPosState();
+      StorageService.setUser(null);
+      setUser(null);
+      setActiveTab('pos');
+      if (hadSession) {
+        alert('Sesi login berakhir atau token tidak valid. Silakan login kembali.');
+      }
+    };
+
+    window.addEventListener('pos:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('pos:unauthorized', handleUnauthorized);
+  }, []);
+
   // If user is not logged in, show Login Screen
   if (!user) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginPage
+        onLoginSuccess={handleLoginSuccess}
+        initialCompanyId={loginPrefill?.companyId}
+        initialUserId={loginPrefill?.userId}
+      />
+    );
   }
 
   // Fail-closed: akun tanpa akses cabang tidak boleh masuk ke terminal
@@ -849,6 +1058,7 @@ export default function App() {
           </p>
           <button
             onClick={() => {
+              resetTransientPosState();
               StorageService.setUser(null);
               setUser(null);
             }}
@@ -986,8 +1196,8 @@ export default function App() {
                 setCategories(cats);
               }}
               onUpdateCustomers={(custs) => {
-                StorageService.saveCustomers(custs);
                 setCustomers(custs);
+                void handleUpdateCustomers(custs);
               }}
               onUpdateOutlets={(updated) => {
                 StorageService.saveOutlets(updated);
@@ -1024,7 +1234,6 @@ export default function App() {
               currentUser={user}
               reportTab={reportTab}
               onReportTabChange={setReportTab}
-              onUpdateTransaction={handleUpdateTransaction}
               onDeleteTransaction={handleDeleteTransaction}
             />
           )}
@@ -1100,8 +1309,6 @@ export default function App() {
         transactions={visibleTransactions}
         currentUser={user}
         canVoid={canVoid(user)}
-        emoneyList={emoneyList}
-        onUpdateTransaction={handleUpdateTransaction}
         onDeleteTransaction={handleDeleteTransaction}
         onSelectTransactionForPrint={(t) => {
           setActiveReceiptTransaction(t);

@@ -9,7 +9,7 @@ import { playBeep, StorageService } from '../../services/storageService';
 interface NewCustomerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddCustomer: (customer: Customer) => void;
+  onAddCustomer: (customer: Customer) => Promise<boolean> | boolean | void;
 }
 
 export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
@@ -24,13 +24,15 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
 
   if (!isOpen) return null;
 
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
   const tierConfigs = StorageService.getMemberTiers();
   const activeTierConfig =
     tierConfigs.find((config) => config.tier === tier) ?? tierConfigs[0];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isSubmitting) return;
 
     const discountPercent = activeTierConfig?.discountPercent ?? 0;
 
@@ -45,9 +47,22 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
       address: address.trim() || '-',
     };
 
-    playBeep('success');
-    onAddCustomer(newCust);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      const saved = await onAddCustomer(newCust);
+      if (saved === false) return;
+      playBeep('success');
+      onClose();
+    } catch (error) {
+      playBeep('error');
+      alert(
+        `Pelanggan belum tersimpan: ${
+          error instanceof Error ? error.message : 'Terjadi kesalahan pada server.'
+        }`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -133,10 +148,11 @@ export const NewCustomerModal: React.FC<NewCustomerModalProps> = ({
             </button>
             <button
               type="submit"
-              className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center gap-1.5"
+              disabled={isSubmitting}
+              className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold flex items-center gap-1.5 disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4" />
-              <span>Daftarkan & Pilih Member</span>
+              <span>{isSubmitting ? 'Menyimpan...' : 'Daftarkan & Pilih Member'}</span>
             </button>
           </div>
         </form>

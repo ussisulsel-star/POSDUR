@@ -52,6 +52,10 @@ export async function apiRequest<T>(
   }
 
   if (!response.ok) {
+    if (response.status === 401 && authenticated && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('pos:unauthorized'));
+    }
+
     throw new ApiError(
       payload.message || payload.error || `Permintaan gagal (${response.status}).`,
       response.status

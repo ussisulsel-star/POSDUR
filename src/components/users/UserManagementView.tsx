@@ -203,20 +203,11 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
       return;
     }
 
-    const credential = prompt(
-      `Otorisasi diperlukan untuk beralih ke sesi "${target.name}" (${target.userId}).\nMasukkan PIN atau Password akun tersebut:`
+    const confirmed = confirm(
+      `Akhiri sesi "${currentUser.name}" dan login sebagai "${target.name}" (${target.userId})?\n\n` +
+        'Anda akan diarahkan ke halaman login untuk memasukkan password akun tujuan.'
     );
-    if (credential === null) return;
-
-    const isAuthorized =
-      (!!target.pin && credential === target.pin) ||
-      (!!target.password && credential === target.password);
-
-    if (!isAuthorized) {
-      playBeep('error');
-      alert('PIN/Password akun tujuan salah. Sesi tidak dialihkan.');
-      return;
-    }
+    if (!confirmed) return;
 
     playBeep('success');
     onSwitchUser(target);

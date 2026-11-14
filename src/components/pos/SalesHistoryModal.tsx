@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, History, Printer, Eye, Calendar, Edit3, Trash2, ShieldAlert } from 'lucide-react';
-import { Transaction, User as PosUser, EMoney, CartItem } from '../../types/pos';
+import { Transaction, User as PosUser, CartItem } from '../../types/pos';
 import { formatRupiah, playBeep } from '../../services/storageService';
-import { EditTransactionModal } from './EditTransactionModal';
 import { VoidTransactionModal } from './VoidTransactionModal';
 
 interface SalesHistoryModalProps {
@@ -10,10 +9,12 @@ interface SalesHistoryModalProps {
   onClose: () => void;
   transactions: Transaction[];
   onSelectTransactionForPrint: (t: Transaction) => void;
-  onUpdateTransaction?: (updatedTx: Transaction) => void;
-  onDeleteTransaction?: (txId: string) => void;
+  onDeleteTransaction?: (
+    txId: string,
+    password: string,
+    reason: string
+  ) => void | Promise<void>;
   currentUser?: PosUser | null;
-  emoneyList?: EMoney[];
   canVoid?: boolean;
 }
 
@@ -22,18 +23,23 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
   onClose,
   transactions,
   onSelectTransactionForPrint,
-  onUpdateTransaction,
   onDeleteTransaction,
   currentUser,
-  emoneyList = [],
   canVoid = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [voidingTx, setVoidingTx] = useState<Transaction | null>(null);
 
   if (!isOpen) return null;
+
+  const handleRequestEdit = () => {
+    playBeep('error');
+    alert(
+      'Koreksi/edit transaksi belum didukung oleh server.\n\n' +
+        'Silakan void transaksi yang salah, lalu buat transaksi baru agar stok, poin, dan rekap shift tetap konsisten.'
+    );
+  };
 
   const filtered = transactions.filter(
     (t) =>
@@ -144,7 +150,7 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 playBeep('scan');
-                                setEditingTx(t);
+                                handleRequestEdit();
                               }}
                               className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-100 rounded"
                               title="Koreksi Transaksi (SPV)"
@@ -278,7 +284,7 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
                       <button
                         onClick={() => {
                           playBeep('scan');
-                          setEditingTx(selectedTx);
+                          handleRequestEdit();
                         }}
                         className="py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                       >
@@ -310,30 +316,16 @@ export const SalesHistoryModal: React.FC<SalesHistoryModalProps> = ({
         </div>
       </div>
 
-      {/* Edit Transaction Modal */}
-      {editingTx && (
-        <EditTransactionModal
-          isOpen={true}
-          onClose={() => setEditingTx(null)}
-          transaction={editingTx}
-          onSaveTransaction={(updatedTx) => {
-            if (onUpdateTransaction) onUpdateTransaction(updatedTx);
-            setSelectedTx(updatedTx);
-            setEditingTx(null);
-          }}
-          currentUser={currentUser}
-          emoneyList={emoneyList}
-        />
-      )}
-
       {/* Void Transaction Modal */}
       {voidingTx && (
         <VoidTransactionModal
           isOpen={true}
           onClose={() => setVoidingTx(null)}
           transaction={voidingTx}
-          onConfirmVoid={(txId, reason) => {
-            if (onDeleteTransaction) onDeleteTransaction(txId);
+          onConfirmVoid={async (txId, password, reason) => {
+            if (onDeleteTransaction) {
+              await onDeleteTransaction(txId, password, reason);
+            }
             if (selectedTx?.id === txId) setSelectedTx(null);
             setVoidingTx(null);
           }}

@@ -1,5 +1,6 @@
 import {
   CartItem,
+  Customer,
   PaymentDetail,
   Product,
   Shift,
@@ -60,6 +61,7 @@ export interface AuthResult {
 
 export interface CorePosData {
   products: Product[];
+  customers: Customer[];
   activeShift: Shift | null;
   transactions: Transaction[];
 }
@@ -67,7 +69,9 @@ export interface CorePosData {
 export interface CheckoutInput {
   invoiceNo: string;
   customerName: string;
+  customerId?: string;
   shiftId?: string;
+  pointsRedeemed?: number;
   items: Array<{
     productId: string;
     qty: number;
@@ -145,8 +149,9 @@ export async function loadCorePosData(
   outletId: string,
   outletName: string
 ): Promise<CorePosData> {
-  const [apiProducts, activeShift, apiTransactions] = await Promise.all([
+  const [apiProducts, apiCustomers, activeShift, apiTransactions] = await Promise.all([
     apiRequest<ApiProduct[]>('/products?limit=500'),
+    apiRequest<Customer[]>('/customers?limit=500'),
     apiRequest<ApiShift | null>('/shifts/active'),
     apiRequest<ApiTransaction[]>('/pos/transactions?limit=200'),
   ]);
@@ -155,6 +160,7 @@ export async function loadCorePosData(
 
   return {
     products,
+    customers: apiCustomers,
     activeShift: activeShift
       ? { ...activeShift, outletId, outletName }
       : null,
@@ -162,6 +168,46 @@ export async function loadCorePosData(
       mapTransaction(transaction, productsById, outletId, outletName)
     ),
   };
+}
+
+export async function loadShiftHistory(limit = 30): Promise<Shift[]> {
+  return apiRequest<Shift[]>(`/shifts?limit=${limit}`);
+}
+
+export interface CustomerInput {
+  code?: string;
+  name: string;
+  phone?: string;
+  tier?: string;
+  discountPercent?: number;
+  points?: number;
+  address?: string;
+}
+
+export async function loadCustomers(search = ''): Promise<Customer[]> {
+  const query = search ? `?search=${encodeURIComponent(search)}&limit=500` : '?limit=500';
+  return apiRequest<Customer[]>(`/customers${query}`);
+}
+
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
+  return apiRequest<Customer>('/customers', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateCustomer(
+  customerId: string,
+  input: Partial<CustomerInput>
+): Promise<Customer> {
+  return apiRequest<Customer>(`/customers/${customerId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteCustomer(customerId: string): Promise<void> {
+  await apiRequest(`/customers/${customerId}`, { method: 'DELETE' });
 }
 
 export async function loginWithApi(
@@ -201,6 +247,21 @@ export async function returnWithApi(input: ReturnInput): Promise<{ id: string }>
   return apiRequest<{ id: string }>('/pos/returns', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Void transaksi di server. `password` adalah password akun yang sedang login
+ * dan diverifikasi ulang oleh backend sebagai otorisasi tindakan.
+ */
+export async function voidTransactionWithApi(
+  transactionId: string,
+  password: string,
+  reason?: string
+): Promise<Transaction> {
+  return apiRequest<Transaction>(`/pos/transactions/${transactionId}/void`, {
+    method: 'POST',
+    body: JSON.stringify({ password, reason }),
   });
 }
 

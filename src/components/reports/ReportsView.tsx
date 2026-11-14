@@ -35,7 +35,6 @@ import { formatRupiah, formatNumber, playBeep, StorageService } from '../../serv
 import { ClosingShiftReportView } from './ClosingShiftReportView';
 import { TrafficReportView } from './TrafficReportView';
 import { UserActivityLogView } from '../audit/UserActivityLogView';
-import { EditTransactionModal } from '../pos/EditTransactionModal';
 import { VoidTransactionModal } from '../pos/VoidTransactionModal';
 import { canVoid, getPermittedOutlets, isAdmin } from '../../services/accessControl';
 import { REPORT_TABS, type ReportTab } from './reportTabs';
@@ -54,8 +53,11 @@ interface ReportsViewProps {
   onClearLogs?: () => void;
   reportTab?: ReportTab;
   onReportTabChange?: (tab: ReportTab) => void;
-  onUpdateTransaction?: (updatedTx: Transaction) => void;
-  onDeleteTransaction?: (txId: string) => void;
+  onDeleteTransaction?: (
+    txId: string,
+    password: string,
+    reason: string
+  ) => void | Promise<void>;
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
@@ -72,7 +74,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   onClearLogs,
   reportTab: controlledReportTab,
   onReportTabChange,
-  onUpdateTransaction,
   onDeleteTransaction,
 }) => {
   const [selectedOutletFilter, setSelectedOutletFilter] = useState<string>('ALL');
@@ -94,8 +95,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   const [spvOutletFilter, setSpvOutletFilter] = useState<string>('ALL');
   const [spvCashierFilter, setSpvCashierFilter] = useState<string>('ALL');
   const [spvShiftFilter, setSpvShiftFilter] = useState<string>('ALL');
-  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [voidingTx, setVoidingTx] = useState<Transaction | null>(null);
+
+  const handleRequestEdit = () => {
+    playBeep('error');
+    alert(
+      'Koreksi/edit transaksi belum didukung oleh server.\n\n' +
+        'Silakan void transaksi yang salah, lalu buat transaksi baru agar stok, poin, dan rekap shift tetap konsisten.'
+    );
+  };
 
   // Batasi data laporan pada outlet yang berhak diakses user (fail-closed)
   const outlets = useMemo(
@@ -1079,7 +1087,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                                   <>
                                 <button
                                   type="button"
-                                  onClick={() => setEditingTx(t)}
+                                  onClick={handleRequestEdit}
                                   className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shadow-2xs cursor-pointer"
                                   title="Koreksi Transaksi (Edit Item, Qty, Metode Bayar)"
                                 >
@@ -2408,25 +2416,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       )}
 
       {/* ================================================================= */}
-      {/* MODAL KOREKSI TRANSAKSI (SPV)                                     */}
-      {/* ================================================================= */}
-      {editingTx && canVoidTransaction && (
-        <EditTransactionModal
-          isOpen={true}
-          onClose={() => setEditingTx(null)}
-          transaction={editingTx}
-          onSaveTransaction={(updatedTx) => {
-            if (onUpdateTransaction) {
-              onUpdateTransaction(updatedTx);
-            }
-            setEditingTx(null);
-          }}
-          emoneyList={emoneyList}
-          currentUser={currentUser}
-        />
-      )}
-
-      {/* ================================================================= */}
       {/* MODAL VOID / HAPUS TRANSAKSI (SPV)                                */}
       {/* ================================================================= */}
       {voidingTx && canVoidTransaction && (
@@ -2434,9 +2423,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           isOpen={true}
           onClose={() => setVoidingTx(null)}
           transaction={voidingTx}
-          onConfirmVoid={(txId, reason) => {
+          onConfirmVoid={async (txId, password, reason) => {
             if (onDeleteTransaction) {
-              onDeleteTransaction(txId);
+              await onDeleteTransaction(txId, password, reason);
             }
             setVoidingTx(null);
           }}

@@ -8,7 +8,11 @@ interface VoidTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   transaction: Transaction;
-  onConfirmVoid: (transactionId: string, reason: string) => void;
+  onConfirmVoid: (
+    transactionId: string,
+    password: string,
+    reason: string
+  ) => void | Promise<void>;
   currentUser?: PosUser | null;
 }
 
@@ -22,39 +26,48 @@ export const VoidTransactionModal: React.FC<VoidTransactionModalProps> = ({
   const [voidReason, setVoidReason] = useState<string>('Pelanggan batal belanja & salah scan ganda');
   const [supervisorPin, setSupervisorPin] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSubmitting) return;
 
     if (!voidReason.trim()) {
       setErrorMsg('Alasan pembatalan/void harus diisi.');
       return;
     }
 
-    // Wajib punya kewenangan void dan PIN akun sendiri
+    // Wajib punya kewenangan void.
     if (!canVoid(currentUser)) {
       playBeep('error');
       setErrorMsg('Akun Anda tidak memiliki kewenangan untuk void / hapus transaksi.');
       return;
     }
 
-    const validPin = currentUser?.pin;
-    const validPassword = currentUser?.password;
-    const isAuthorized =
-      (!!validPin && supervisorPin === validPin) ||
-      (!!validPassword && supervisorPin === validPassword);
-
-    if (!isAuthorized) {
+    if (!supervisorPin.trim()) {
       playBeep('error');
-      setErrorMsg('PIN/Password otorisasi salah. Gunakan PIN akun Anda sendiri.');
+      setErrorMsg('Password otorisasi wajib diisi.');
       return;
     }
 
-    playBeep('success');
-    onConfirmVoid(transaction.id, voidReason);
-    onClose();
+    setIsSubmitting(true);
+    try {
+      await onConfirmVoid(transaction.id, supervisorPin, voidReason);
+      playBeep('success');
+      onClose();
+    } catch (error) {
+      playBeep('error');
+      setErrorMsg(
+        error instanceof Error
+          ? error.message
+          : 'Void transaksi gagal diproses oleh server.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -132,22 +145,25 @@ export const VoidTransactionModal: React.FC<VoidTransactionModalProps> = ({
             <label className="block font-semibold text-slate-700 mb-1 flex items-center justify-between">
               <span className="flex items-center gap-1">
                 <KeyRound className="w-3.5 h-3.5 text-slate-500" />
-                <span>PIN Otorisasi Akun Anda:</span>
+                <span>Password Otorisasi Akun Anda:</span>
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">Wajib</span>
+              <span className="text-[10px] text-slate-400 font-mono">Diverifikasi Server</span>
             </label>
             <input
               type="password"
-              maxLength={32}
+              maxLength={200}
               value={supervisorPin}
               onChange={(e) => {
                 setSupervisorPin(e.target.value);
                 setErrorMsg('');
               }}
-              placeholder="Masukkan PIN / Password akun Anda"
+              placeholder="Masukkan password login akun Anda"
               className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-center font-mono font-bold tracking-widest text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
               required
             />
+            <p className="mt-1 text-[10px] text-slate-500">
+              Void dicatat ke server beserta nama pengguna dan alasan pembatalan.
+            </p>
           </div>
 
           {errorMsg && (
@@ -168,10 +184,11 @@ export const VoidTransactionModal: React.FC<VoidTransactionModalProps> = ({
             </button>
             <button
               type="submit"
-              className="py-2 px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-colors"
+              disabled={isSubmitting}
+              className="py-2 px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold flex items-center gap-1.5 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" />
-              <span>Konfirmasi Hapus / Void</span>
+              <span>{isSubmitting ? 'Memproses...' : 'Konfirmasi Hapus / Void'}</span>
             </button>
           </div>
         </form>

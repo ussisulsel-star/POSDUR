@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { query, withTransaction } from '../db';
 import { ApiError, asyncHandler } from '../errors';
 import { requireRole } from '../middleware/authMiddleware';
@@ -179,6 +180,18 @@ router.post(
     );
 
     const customerId = optionalUuid(body.customerId, 'customerId');
+    const pointsRedeemed = parseInteger(body.pointsRedeemed, 'pointsRedeemed', {
+      min: 0,
+      fallback: 0,
+    });
+
+    if (pointsRedeemed > 0 && !customerId) {
+      throw new ApiError(
+        422,
+        'pointsRedeemed memerlukan customerId pelanggan terdaftar.'
+      );
+    }
+
     const requestedCustomerName = optionalString(
       body.customerName,
       'customerName',
@@ -317,9 +330,10 @@ router.post(
 
       if (customerId) {
         const customerResult = await client.query(
-          `SELECT id, name
+          `SELECT id, name, points
              FROM customers
-            WHERE company_id = $1 AND id = $2`,
+            WHERE company_id = $1 AND id = $2
+            FOR UPDATE`,
           [companyId, customerId]
         );
 
@@ -327,8 +341,17 @@ router.post(
           throw new ApiError(422, 'Pelanggan tidak ditemukan.');
         }
 
-        resolvedCustomerId = String(customerResult.rows[0].id);
-        customerName = String(customerResult.rows[0].name);
+        const customer = customerResult.rows[0];
+
+        if (pointsRedeemed > toNumber(customer.points)) {
+          throw new ApiError(
+            422,
+            `Poin pelanggan tidak cukup (tersedia ${toNumber(customer.points)}, diminta ${pointsRedeemed}).`
+          );
+        }
+
+        resolvedCustomerId = String(customer.id);
+        customerName = String(customer.name);
       }
 
       // 3. Tentukan shift aktif kasir (opsional bila kasir belum buka shift).
@@ -473,15 +496,16 @@ router.post(
         );
       }
 
-      // 8. Tambah poin loyalitas (1 poin per Rp 10.000).
+      // 8. Perbarui poin loyalitas: potong poin yang ditukar, tambah 1 poin
+      // per Rp 10.000 belanja.
       if (resolvedCustomerId) {
-        const points = Math.floor(grandTotal / 10_000);
-        if (points > 0) {
+        const earnedPoints = Math.floor(grandTotal / 10_000);
+        if (earnedPoints > 0 || pointsRedeemed > 0) {
           await client.query(
             `UPDATE customers
-                SET points = points + $3
+                SET points = points - $3 + $4
               WHERE company_id = $1 AND id = $2`,
-            [companyId, resolvedCustomerId, points]
+            [companyId, resolvedCustomerId, pointsRedeemed, earnedPoints]
           );
         }
       }
@@ -497,6 +521,198 @@ router.post(
         payments: result.insertedPayments,
       }),
     });
+  })
+);
+
+/**
+ * POST /api/v1/pos/transactions/:id/void
+ * Body: { password, reason? }
+ * Membatalkan nota: stok dikembalikan, poin belanja ditarik, dan rekap shift
+ * yang masih OPEN dihitung ulang dari transaksi yang tersisa.
+ * Password akun yang sedang login wajib dikirim sebagai otorisasi ulang.
+ */
+router.post(
+  '/transactions/:id/void',
+  requireRole('ADMIN', 'SUPERVISOR'),
+  asyncHandler(async (req, res) => {
+    if (!isUuid(req.params.id)) {
+      throw new ApiError(400, 'id transaksi harus berupa UUID yang valid.');
+    }
+
+    const companyId = req.user!.companyId;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const password = requireString(body.password, 'password', {
+      maxLength: 200,
+    });
+    const reason =
+      optionalString(body.reason, 'reason', 500) ?? 'Void oleh supervisor';
+    const cashierName = req.user!.name || req.user!.userId || 'SUPERVISOR';
+
+    const credentialResult = await query(
+      `SELECT password_hash
+         FROM users
+        WHERE company_id = $1 AND id = $2 AND is_active = TRUE`,
+      [companyId, req.user!.id]
+    );
+
+    if (credentialResult.rows.length === 0) {
+      throw new ApiError(401, 'Akun otorisasi tidak ditemukan atau nonaktif.');
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      password,
+      String(credentialResult.rows[0].password_hash)
+    );
+
+    if (!passwordMatches) {
+      throw new ApiError(403, 'Password otorisasi salah. Void dibatalkan.');
+    }
+
+    const result = await withTransaction(async (client) => {
+      const transactionResult = await client.query(
+        `SELECT *
+           FROM transactions
+          WHERE company_id = $1 AND id = $2
+          FOR UPDATE`,
+        [companyId, req.params.id]
+      );
+
+      if (transactionResult.rows.length === 0) {
+        throw new ApiError(404, 'Transaksi tidak ditemukan.');
+      }
+
+      const transaction = transactionResult.rows[0];
+
+      if (transaction.status === 'BATAL') {
+        throw new ApiError(409, 'Transaksi sudah dibatalkan sebelumnya.');
+      }
+      if (transaction.status === 'RETUR') {
+        throw new ApiError(
+          409,
+          'Transaksi sudah diretur dan tidak dapat dibatalkan.'
+        );
+      }
+
+      const itemResult = await client.query(
+        `SELECT product_id, qty
+           FROM transaction_items
+          WHERE transaction_id = $1`,
+        [transaction.id]
+      );
+
+      for (const item of itemResult.rows) {
+        await client.query(
+          `UPDATE products
+              SET stock = stock + $3, updated_at = NOW()
+            WHERE company_id = $1 AND id = $2`,
+          [companyId, item.product_id, item.qty]
+        );
+      }
+
+      // Rekap shift hanya dihitung ulang bila shift masih terbuka.
+      if (transaction.shift_id) {
+        const shiftResult = await client.query(
+          `SELECT id, status
+             FROM pos_shifts
+            WHERE company_id = $1 AND id = $2
+            FOR UPDATE`,
+          [companyId, transaction.shift_id]
+        );
+        const shift = shiftResult.rows[0];
+
+        if (shift && shift.status === 'OPEN') {
+          const salesResult = await client.query(
+            `SELECT
+               COALESCE(SUM(GREATEST(t.grand_total - COALESCE(nc.non_cash, 0), 0)), 0) AS cash_sales,
+               COALESCE(SUM(LEAST(COALESCE(nc.non_cash, 0), t.grand_total)), 0) AS non_cash_sales
+             FROM transactions t
+             LEFT JOIN LATERAL (
+               SELECT SUM(p.amount) AS non_cash
+                 FROM payments p
+                WHERE p.transaction_id = t.id AND p.method <> 'TUNAI'
+             ) nc ON TRUE
+            WHERE t.company_id = $1 AND t.shift_id = $2 AND t.status <> 'BATAL'`,
+            [companyId, shift.id]
+          );
+
+          const movementResult = await client.query(
+            `SELECT
+               COALESCE(SUM(CASE WHEN type = 'MASUK' THEN amount ELSE 0 END), 0) AS cash_in,
+               COALESCE(SUM(CASE WHEN type = 'KELUAR' THEN amount ELSE 0 END), 0) AS cash_out
+             FROM cash_movements
+            WHERE company_id = $1 AND shift_id = $2`,
+            [companyId, shift.id]
+          );
+
+          const totalCashSales = roundMoney(
+            toNumber(salesResult.rows[0]?.cash_sales)
+          );
+          const totalNonCashSales = roundMoney(
+            toNumber(salesResult.rows[0]?.non_cash_sales)
+          );
+          const totalCashIn = roundMoney(
+            toNumber(movementResult.rows[0]?.cash_in)
+          );
+          const totalCashOut = roundMoney(
+            toNumber(movementResult.rows[0]?.cash_out)
+          );
+
+          await client.query(
+            `UPDATE pos_shifts
+                SET total_cash_sales = $3,
+                    total_non_cash_sales = $4,
+                    total_cash_in = $5,
+                    total_cash_out = $6,
+                    expected_cash = initial_cash + $3 + $5 - $6
+              WHERE company_id = $1 AND id = $2`,
+            [
+              companyId,
+              shift.id,
+              totalCashSales,
+              totalNonCashSales,
+              totalCashIn,
+              totalCashOut,
+            ]
+          );
+        }
+      }
+
+      // Tarik poin belanja yang sempat diberikan untuk nota ini.
+      if (transaction.customer_id) {
+        const earnedPoints = Math.floor(toNumber(transaction.grand_total) / 10_000);
+        if (earnedPoints > 0) {
+          await client.query(
+            `UPDATE customers
+                SET points = GREATEST(points - $3, 0)
+              WHERE company_id = $1 AND id = $2`,
+            [companyId, transaction.customer_id, earnedPoints]
+          );
+        }
+      }
+
+      await client.query(
+        `UPDATE transactions
+            SET status = 'BATAL',
+                notes = COALESCE(notes || ' | ', '') || $3
+          WHERE company_id = $1 AND id = $2`,
+        [
+          companyId,
+          transaction.id,
+          `[VOID by ${cashierName} - ${reason}]`,
+        ]
+      );
+
+      const updated = await client.query(
+        `${TRANSACTION_SELECT}
+          WHERE t.company_id = $1 AND t.id = $2
+          LIMIT 1`,
+        [companyId, transaction.id]
+      );
+
+      return updated.rows[0];
+    });
+
+    res.json({ success: true, data: mapTransaction(result) });
   })
 );
 

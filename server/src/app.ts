@@ -5,6 +5,7 @@ import { pingDatabase } from './db';
 import { asyncHandler } from './errors';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
+import customerRoutes from './routes/customers';
 import posRoutes from './routes/pos';
 import shiftRoutes from './routes/shifts';
 import {
@@ -59,6 +60,7 @@ app.get('/api/v1/health', healthHandler);
 app.use('/api/v1/auth', authRoutes);
 
 app.use('/api/v1/products', authenticateJWT, productRoutes);
+app.use('/api/v1/customers', authenticateJWT, customerRoutes);
 app.use('/api/v1/pos', authenticateJWT, posRoutes);
 app.use('/api/v1/shifts', authenticateJWT, shiftRoutes);
 
