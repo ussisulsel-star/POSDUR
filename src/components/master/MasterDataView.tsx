@@ -1059,7 +1059,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       code: '',
                       name: '',
                       provider: '',
-                      accountNumber: 'MID-99999-',
+                      accountNumber: 'MID-001-',
                       mdrFeePercent: 0.7,
                       isQRISSupported: true,
                       isActive: true,
@@ -2480,7 +2480,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           code: 'OVO',
                           name: 'OVO',
                           provider: 'PT Visionet Internasional (Lippo Group)',
-                          accountNumber: 'MID-99999-OVO' + Math.floor(1000 + Math.random() * 9000),
+                          accountNumber: 'MID-001-OVO' + Math.floor(1000 + Math.random() * 9000),
                           color: '#4C3494',
                           mdrFeePercent: 0.7,
                           isQRISSupported: true,
@@ -2500,7 +2500,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           code: 'GOPAY',
                           name: 'GoPay',
                           provider: 'PT Dompet Anak Bangsa (GoTo Financial)',
-                          accountNumber: 'MID-99999-GPY' + Math.floor(1000 + Math.random() * 9000),
+                          accountNumber: 'MID-001-GPY' + Math.floor(1000 + Math.random() * 9000),
                           color: '#00AED6',
                           mdrFeePercent: 0.7,
                           isQRISSupported: true,
@@ -2520,7 +2520,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           code: 'SHOPEE',
                           name: 'ShopeePay',
                           provider: 'PT AirPay International Indonesia (Sea Group)',
-                          accountNumber: 'MID-99999-SHP' + Math.floor(1000 + Math.random() * 9000),
+                          accountNumber: 'MID-001-SHP' + Math.floor(1000 + Math.random() * 9000),
                           color: '#EE4D2D',
                           mdrFeePercent: 0.7,
                           isQRISSupported: true,
@@ -2540,7 +2540,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           code: 'DANA',
                           name: 'DANA',
                           provider: 'PT Espay Debit Indonesia Koe',
-                          accountNumber: 'MID-99999-DNA' + Math.floor(1000 + Math.random() * 9000),
+                          accountNumber: 'MID-001-DNA' + Math.floor(1000 + Math.random() * 9000),
                           color: '#118EEA',
                           mdrFeePercent: 0.7,
                           isQRISSupported: true,
@@ -2560,7 +2560,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           code: 'LINKAJA',
                           name: 'LinkAja',
                           provider: 'PT Fintek Karya Nusantara (BUMN)',
-                          accountNumber: 'MID-99999-LKA' + Math.floor(1000 + Math.random() * 9000),
+                          accountNumber: 'MID-001-LKA' + Math.floor(1000 + Math.random() * 9000),
                           color: '#ED1C24',
                           mdrFeePercent: 0.7,
                           isQRISSupported: true,
@@ -2620,7 +2620,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                     type="text"
                     value={editingEMoney.accountNumber || ''}
                     onChange={(e) => setEditingEMoney({ ...editingEMoney, accountNumber: e.target.value })}
-                    placeholder="MID-99999-XXXX"
+                    placeholder="MID-001-XXXX"
                     className="w-full p-2 bg-slate-50 border border-slate-300 rounded font-mono font-bold text-blue-700"
                   />
                 </div>

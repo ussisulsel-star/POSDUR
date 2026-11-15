@@ -116,7 +116,7 @@ Buka aplikasi di `http://IP-VPS` lalu login dengan tenant demo:
 
 | Field | Nilai |
 |---|---|
-| Company ID | `99999` |
+| Company ID | `001` |
 | User ID | `ADMIN` |
 | Password | `99999psfdv` |
 

@@ -51,7 +51,7 @@ console.log(`[i] Login sebagai ${adminUser} ke ${baseUrl} ...`);
 const loginRes = await fetch(`${baseUrl}/auth/login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ companyId: '99999', userId: adminUser, password: adminPass }),
+  body: JSON.stringify({ companyId: '001', userId: adminUser, password: adminPass }),
 });
 const loginJson = await loginRes.json().catch(() => ({}));
 if (!loginRes.ok || !loginJson?.data?.token) {

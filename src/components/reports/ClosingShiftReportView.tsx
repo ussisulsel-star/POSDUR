@@ -84,7 +84,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
       outletName: outlets[0]?.name || 'DEL USAHA RASA GRUP (Pusat & HQ)',
       cashierId: currentUser?.userId || 'ADMIN',
       cashierName: currentUser?.name || 'ADMINISTRATOR',
-      companyId: '99999',
+      companyId: '001',
       startTime: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
       endTime: new Date().toISOString(),
       initialCash: 500000,
@@ -886,7 +886,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
                   {currentShift.outletName || outlets[0]?.name || 'Cabang Kelapa Gading (Pusat & HQ)'}
                 </p>
                 <p className="text-[11px] text-slate-500 font-mono">
-                  Sistem POS Cloud DUR POS · ID Perusahaan: 99999 · Dokumen Resmi Audit Kasir
+                  Sistem POS Cloud DUR POS · ID Perusahaan: 001 · Dokumen Resmi Audit Kasir
                 </p>
                 <div className="inline-block bg-slate-900 text-white font-bold text-xs px-3 py-1 rounded mt-2 uppercase tracking-widest font-mono">
                   BERITA ACARA SERAH TERIMA & TUTUP KASIR

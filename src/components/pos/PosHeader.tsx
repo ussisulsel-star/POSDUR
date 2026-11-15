@@ -117,7 +117,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
 
           <div className="hidden lg:flex items-center gap-2 text-xs text-slate-300 bg-slate-800/80 px-2.5 py-1.5 rounded-md border border-slate-700/60">
             <Building2 className="w-3.5 h-3.5 text-blue-400" />
-            <span className="font-semibold text-white">ID: {user.companyId || '99999'}</span>
+            <span className="font-semibold text-white">ID: {user.companyId || '001'}</span>
             <span className="text-slate-500">|</span>
             <span className="text-slate-300">DEL USAHA RASA GRUP</span>
           </div>

@@ -57,7 +57,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 DEL USAHA RASA GRUP
               </div>
               <div className="text-[10px] text-slate-600">
-                ID Perusahaan: 99999 · Cabang Utama
+                ID Perusahaan: 001 · Cabang Utama
               </div>
               <div className="text-[10px] text-slate-600">
                 Jl. Boulevard Raya Blok A2 No. 10

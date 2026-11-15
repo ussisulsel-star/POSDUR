@@ -531,7 +531,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         code: 'OVO',
         name: 'OVO',
         provider: 'PT Visionet Internasional (Lippo Group)',
-        accountNumber: 'MID-99999-OVO8821',
+        accountNumber: 'MID-001-OVO8821',
         mdrFeePercent: 0.7,
         color: '#4C3494',
         isActive: true,
@@ -542,7 +542,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         code: 'GOPAY',
         name: 'GoPay',
         provider: 'PT Dompet Anak Bangsa (GoTo Financial)',
-        accountNumber: 'MID-99999-GPY7712',
+        accountNumber: 'MID-001-GPY7712',
         mdrFeePercent: 0.7,
         color: '#00AED6',
         isActive: true,
@@ -553,7 +553,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         code: 'SHOPEE',
         name: 'ShopeePay',
         provider: 'PT AirPay International Indonesia (Sea Group)',
-        accountNumber: 'MID-99999-SHP5543',
+        accountNumber: 'MID-001-SHP5543',
         mdrFeePercent: 0.7,
         color: '#EE4D2D',
         isActive: true,
@@ -564,7 +564,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         code: 'DANA',
         name: 'DANA',
         provider: 'PT Espay Debit Indonesia Koe',
-        accountNumber: 'MID-99999-DNA3319',
+        accountNumber: 'MID-001-DNA3319',
         mdrFeePercent: 0.7,
         color: '#118EEA',
         isActive: true,
@@ -575,7 +575,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         code: 'LINKAJA',
         name: 'LinkAja',
         provider: 'PT Fintek Karya Nusantara (BUMN/Telkomsel)',
-        accountNumber: 'MID-99999-LKA1184',
+        accountNumber: 'MID-001-LKA1184',
         mdrFeePercent: 0.7,
         color: '#ED1C24',
         isActive: true,
@@ -585,7 +585,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       code: 'QRIS',
       name: name,
       provider: 'National QRIS Switching (Bank Indonesia / ASPI)',
-      accountNumber: 'NMID-ID1020009999901',
+      accountNumber: 'NMID-ID102000001101',
       mdrFeePercent: 0.7,
       color: '#0284c7',
       isActive: true,
@@ -2206,7 +2206,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   KANTOR PUSAT & MANAGEMENT MULTI-OUTLET NASIONAL
                 </p>
                 <p className="text-[11px] text-slate-500 font-mono">
-                  Sistem POS Cloud DUR POS · ID Perusahaan: 99999 · Dokumen Resmi Konsolidasi Keuangan Antar Cabang
+                  Sistem POS Cloud DUR POS · ID Perusahaan: 001 · Dokumen Resmi Konsolidasi Keuangan Antar Cabang
                 </p>
                 <div className="inline-block bg-slate-900 text-white font-bold text-xs px-3.5 py-1 rounded mt-2 uppercase tracking-widest font-mono">
                   LAPORAN MATRIKS KONSOLIDASI PENJUALAN ANTAR CABANG

@@ -1072,7 +1072,7 @@ export default function App() {
     const newTx: Transaction = {
       id: 'tx-' + Date.now(),
       invoiceNo,
-      companyId: user?.companyId || '99999',
+      companyId: user?.companyId || '001',
       outletId: activeOutlet.id,
       outletName: activeOutlet.name,
       cashierId: user?.userId || 'ADMIN',

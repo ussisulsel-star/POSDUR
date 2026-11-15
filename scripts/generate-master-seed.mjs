@@ -113,14 +113,14 @@ const rows = dataLines.map((line, index) => {
 
 const outletValues = OUTLETS.map(
   ([id, code, name, brand, address, phone, city, isHq, isMall]) =>
-    `(${quote(id)}, '99999', ${quote(code)}, ${quote(name)}, ${quote(brand)}, ${quote(
+    `(${quote(id)}, '001', ${quote(code)}, ${quote(name)}, ${quote(brand)}, ${quote(
       address,
     )}, ${quote(phone)}, ${quote(city)}, ${bool(isHq)}, ${bool(isMall)}, TRUE)`,
 ).join(',\n');
 
 const brandValues = BRANDS.map(
   ([id, name, tagline, emoji, colorKey]) =>
-    `(${quote(id)}, '99999', ${quote(name)}, ${quote(tagline)}, ${quote(emoji)}, ${quote(
+    `(${quote(id)}, '001', ${quote(name)}, ${quote(tagline)}, ${quote(emoji)}, ${quote(
       colorKey,
     )}, TRUE)`,
 ).join(',\n');
@@ -129,13 +129,13 @@ const categoryValues = [
   ['cat-all', 'Semua'],
   ...CATEGORY_ORDER.map((name) => [CATEGORY_ID[name], name]),
 ]
-  .map(([id, name]) => `(${quote(id)}, '99999', ${quote(name)})`)
+  .map(([id, name]) => `(${quote(id)}, '001', ${quote(name)})`)
   .join(',\n');
 
 const productValues = rows
   .map(
     (row) =>
-      `('99999', ${quote(row.code)}, ${quote(row.barcode)}, ${quote(row.name)}, ${quote(
+      `('001', ${quote(row.code)}, ${quote(row.barcode)}, ${quote(row.name)}, ${quote(
         row.categoryId,
       )}, ${quote(PRODUCT_BRAND)}, ${quote(row.unit)}, 0, ${row.sellPrice}, ${
         row.sellPriceMall
@@ -183,7 +183,7 @@ ON CONFLICT ON CONSTRAINT uq_company_code DO NOTHING;
 INSERT INTO point_settings
     (company_id, enabled, active_from, active_until, redeem_value, min_redeem_points, product_points)
 VALUES
-    ('99999', TRUE, '${year}-01-01', '${year}-12-31', 100, 10, '{}'::jsonb)
+    ('001', TRUE, '${year}-01-01', '${year}-12-31', 100, 10, '{}'::jsonb)
 ON CONFLICT (company_id) DO NOTHING;
 
 -- 6. Metadata admin tenant demo: akses seluruh outlet & permission penuh
@@ -200,7 +200,7 @@ UPDATE users
            '{"canDiscount":true,"canVoid":true,"canReturn":true,"canOpenDrawer":true,"canViewReports":true,"canEditPrice":true}'::jsonb
          ELSE permissions
        END
- WHERE company_id = '99999' AND user_id = 'ADMIN';
+ WHERE company_id = '001' AND user_id = 'ADMIN';
 `;
 
 fs.writeFileSync(outPath, sql, 'utf8');

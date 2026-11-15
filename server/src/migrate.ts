@@ -12,6 +12,7 @@ import { pool } from './db';
 const MIGRATION_FILES = [
   'db/migrations/002_master_data.sql',
   'db/seeds/002_master_data.sql',
+  'db/migrations/003_rename_company_id.sql',
 ];
 
 function resolveProjectFile(relativePath: string): string | null {

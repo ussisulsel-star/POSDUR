@@ -53,7 +53,7 @@ Proyek ini terdiri dari dua bagian:
 .
 ├── db/
 │   ├── migrations/001_initial_schema.sql   # 12 tabel + index
-│   └── seeds/001_initial_seed.sql          # tenant 99999, admin, produk contoh
+│   └── seeds/001_initial_seed.sql          # tenant 001, admin, produk contoh
 ├── docker/
 │   ├── Dockerfile                          # build frontend + Nginx
 │   ├── Dockerfile.backend                  # build & jalankan API
@@ -222,7 +222,7 @@ Compose juga membaca `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTG
 
 | Field | Nilai |
 |---|---|
-| ID Perusahaan | `99999` |
+| ID Perusahaan | `001` |
 | User ID | `ADMIN` |
 | Password | `99999psfdv` |
 | Role | `ADMIN` |
@@ -321,7 +321,7 @@ Koreksi transaksi menghitung ulang stok, poin member, dan agregat kas shift dala
 ```bash
 curl -X POST http://localhost:4000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"companyId":"99999","userId":"ADMIN","password":"99999psfdv"}'
+  -d '{"companyId":"001","userId":"ADMIN","password":"99999psfdv"}'
 ```
 
 ### Contoh: checkout

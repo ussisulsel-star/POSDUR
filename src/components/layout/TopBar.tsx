@@ -75,7 +75,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="hidden items-center gap-2 rounded-md border border-slate-700/60 bg-slate-800/80 px-2.5 py-1.5 text-xs text-slate-300 lg:flex">
         <Building2 className="h-3.5 w-3.5 text-blue-400" />
         <span className="font-semibold text-white">
-          ID: {user.companyId || '99999'}
+          ID: {user.companyId || '001'}
         </span>
         <span className="text-slate-500">|</span>
         <span>DEL USAHA RASA GRUP</span>

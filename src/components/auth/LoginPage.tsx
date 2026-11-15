@@ -110,7 +110,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   type="text"
                   value={companyId}
                   onChange={(e) => setCompanyId(e.target.value)}
-                  placeholder="Contoh: 99999"
+                  placeholder="Contoh: 001"
                   className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl font-mono text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                   required
                 />

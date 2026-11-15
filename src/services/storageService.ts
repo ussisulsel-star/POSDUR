@@ -82,7 +82,7 @@ const normalizePointSettings = (
   };
 };
 
-const DEFAULT_SETTINGS: StoreSettings = {  companyId: '99999',
+const DEFAULT_SETTINGS: StoreSettings = {  companyId: '001',
   storeName: 'DEL USAHA RASA GRUP',
   branchName: 'Cabang Utama - Jakarta',
   address: 'Jl. Boulevard Raya Blok A2 No. 10, Kelapa Gading',
@@ -159,7 +159,7 @@ export const StorageService = {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.USER);
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-      if (!data || !token || token.endsWith('.dur_signature_99999')) {
+      if (!data || !token || token.endsWith('.dur_signature_001')) {
         localStorage.removeItem(STORAGE_KEYS.USER);
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
         return null;
@@ -206,7 +206,7 @@ export const StorageService = {
 
         // Migrasi keamanan: hapus password universal pada akun non-ADMIN.
         // Akun tersebut tetap bisa login dengan PIN masing-masing.
-        if (u.role !== 'ADMIN' && password === '99999psfdv') {
+        if (u.role !== 'ADMIN' && password === '001psfdv') {
           changed = true;
           password = u.pin || undefined;
         }
@@ -731,7 +731,7 @@ export const StorageService = {
           outletName: activeOutlet.name,
           cashierId: 'ADMIN',
           cashierName: 'ADMINISTRATOR',
-          companyId: '99999',
+          companyId: '001',
           startTime: new Date().toISOString(),
           initialCash: 500000,
           totalCashSales: 0,

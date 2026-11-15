@@ -338,7 +338,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <div className="flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5">
               <div className="text-center">
                 <span className="font-bold text-sm text-slate-900 block">QRIS & E-Money Standar Nasional</span>
-                <span className="text-xs text-slate-500 font-mono">NMID: ID1020009999901 · DEL USAHA RASA GRUP POS</span>
+                <span className="text-xs text-slate-500 font-mono">NMID: ID102000001101 · DEL USAHA RASA GRUP POS</span>
               </div>
 
               {/* E-Money Channel Picker */}

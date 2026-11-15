@@ -215,7 +215,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     const defaultOutlet = outlets[0]?.id || 'out-001';
     const newUser: PosUser = {
       id: 'usr-' + Date.now(),
-      companyId: currentUser.companyId || '99999',
+      companyId: currentUser.companyId || '001',
       userId: '',
       name: '',
       role: 'KASIR',
