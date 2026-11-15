@@ -10,9 +10,11 @@ import { pool } from './db';
  * kali server start.
  */
 const MIGRATION_FILES = [
+  // 003 harus lebih dulu: mengganti ID perusahaan 99999 -> 001 di database
+  // yang sudah ada, agar seed 002 (yang memakai '001') lolos FK.
+  'db/migrations/003_rename_company_id.sql',
   'db/migrations/002_master_data.sql',
   'db/seeds/002_master_data.sql',
-  'db/migrations/003_rename_company_id.sql',
 ];
 
 function resolveProjectFile(relativePath: string): string | null {
