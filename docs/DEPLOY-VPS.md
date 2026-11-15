@@ -1,4 +1,4 @@
-# Panduan Deploy VPS (Ubuntu/Debian + PostgreSQL 16 Native)
+﻿# Panduan Deploy VPS (Ubuntu/Debian + PostgreSQL 16 Native)
 
 Panduan ini membangun seluruh tumpukan di satu VPS dengan PostgreSQL 16
 yang **sudah terpasang** (bukan container), backend Node.js, dan frontend
@@ -8,11 +8,11 @@ Arsitektur akhir:
 
 ```
 Browser/Perangkat Kasir
-        │  http://IP-VPS  (port 80/443)
-        ▼
-   Nginx ── /api/ ──▶ Express API (pm2, 127.0.0.1:4000)
-     │                       │
-     └── dist/ (statik)      ▼
+        â”‚  http://IP-VPS  (port 80/443)
+        â–¼
+   Nginx â”€â”€ /api/ â”€â”€â–¶ Express API (pm2, 127.0.0.1:4000)
+     â”‚                       â”‚
+     â””â”€â”€ dist/ (statik)      â–¼
                     PostgreSQL 16 (127.0.0.1:5432)
 ```
 
@@ -38,14 +38,14 @@ Jalankan satu perintah berikut. Skrip akan membuat role + database
 12 cabang, 230 produk, pengaturan poin) secara idempoten:
 
 ```bash
-# Password DB dibuat acak dan dicetak di akhir — catat!
+# Password DB dibuat acak dan dicetak di akhir â€” catat!
 sudo bash scripts/setup-vps-db.sh
 
 # Atau tentukan sendiri:
 sudo DB_PASSWORD='PasswordAndaYangKuat' bash scripts/setup-vps-db.sh
 ```
 
-Kredensial default lain: database `ketoko_pos_db`, user `ketoko_user`
+Kredensial default lain: database `dur_pos_db`, user `dur_user`
 (ubah lewat `DB_NAME`/`DB_USER` bila perlu).
 
 ## 3. Konfigurasi backend
@@ -55,7 +55,7 @@ Buat `server/.env` (nilai contoh memakai hasil skrip di langkah 2):
 ```ini
 PORT=4000
 NODE_ENV=production
-DATABASE_URL=postgres://ketoko_user:PASSWORD_DB@127.0.0.1:5432/ketoko_pos_db
+DATABASE_URL=postgres://dur_user:PASSWORD_DB@127.0.0.1:5432/dur_pos_db
 JWT_SECRET=GANTI-DENGAN-STRING-ACAK-MINIMAL-32-KARAKTER
 JWT_EXPIRES_IN=8h
 CORS_ORIGIN=http://IP-ATAU-DOMAIN-VPS
@@ -78,7 +78,7 @@ npm ci               # lengkap dulu, termasuk TypeScript untuk build
 npm run build        # tsc -> dist/
 npm prune --omit=dev # buang dependensi development sebelum produksi
 sudo npm install -g pm2
-pm2 start dist/server.js --name ketoko-api
+pm2 start dist/server.js --name dur-api
 pm2 save
 pm2 startup            # ikuti instruksi agar auto-start saat boot
 ```
@@ -121,7 +121,7 @@ Buka aplikasi di `http://IP-VPS` lalu login dengan tenant demo:
 | Password | `99999psfdv` |
 
 > **Segera ganti password ADMIN** setelah login pertama: menu
-> Master Data → Pengguna → ubah password akun ADMIN, lalu buat akun
+> Master Data â†’ Pengguna â†’ ubah password akun ADMIN, lalu buat akun
 > kasir masing-masing cabang.
 
 ## 6. Keamanan minimum
@@ -144,11 +144,11 @@ Buka aplikasi di `http://IP-VPS` lalu login dengan tenant demo:
 
 | Tugas | Perintah |
 |---|---|
-| Update aplikasi | `git pull && cd server && npm ci && npm run build && pm2 restart ketoko-api && cd .. && npm ci && npm run build` |
-| Log backend | `pm2 logs ketoko-api` |
+| Update aplikasi | `git pull && cd server && npm ci && npm run build && pm2 restart dur-api && cd .. && npm ci && npm run build` |
+| Log backend | `pm2 logs dur-api` |
 | Status backend | `pm2 status` |
-| Backup database | `sudo -u postgres pg_dump ketoko_pos_db > backup-$(date +%F).sql` |
-| Restore backup | `sudo -u postgres psql ketoko_pos_db < backup-TANGGAL.sql` |
+| Backup database | `sudo -u postgres pg_dump dur_pos_db > backup-$(date +%F).sql` |
+| Restore backup | `sudo -u postgres psql dur_pos_db < backup-TANGGAL.sql` |
 
 Cadangkan `pg_dump` secara berkala (cron harian) ke lokasi aman.
 

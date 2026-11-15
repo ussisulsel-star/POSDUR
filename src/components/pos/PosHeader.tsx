@@ -325,7 +325,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         </div>
       </div>
 
-      {/* POS Quick Function Keys Strip (Characteristic of Ketoko POS desktop & web terminals) */}
+      {/* POS Quick Function Keys Strip */}
       {activeTab === 'pos' && (
         <div className="bg-slate-950 px-4 py-1.5 border-t border-slate-800 flex items-center justify-between text-[11px] overflow-x-auto whitespace-nowrap gap-4">
           <div className="flex items-center gap-4 text-slate-400 font-mono">

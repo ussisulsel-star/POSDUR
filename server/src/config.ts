@@ -25,7 +25,7 @@ export const config = {
   port: Number(process.env.PORT || 4000),
   databaseUrl: readEnv(
     'DATABASE_URL',
-    'postgres://ketoko_user:ketoko_secure_password_99999@localhost:5432/ketoko_pos_db'
+    'postgres://dur_user:dur_secure_password_99999@localhost:5432/dur_pos_db'
   ),
   jwtSecret: isProduction
     ? readEnv('JWT_SECRET')

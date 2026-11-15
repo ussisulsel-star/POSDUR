@@ -1,5 +1,5 @@
 -- =====================================================================
--- KETOKO POS SEED SCRIPT
+-- DUR POS SEED SCRIPT
 -- Default Tenant, Admin Account & Indonesian Retail Inventory
 -- =====================================================================
 

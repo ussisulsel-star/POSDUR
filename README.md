@@ -134,7 +134,7 @@ npm run preview   # pratinjau hasil build
    npm run db:start
    ```
 
-   Perintah ini menginisialisasi cluster PostgreSQL 16 di `server/.pgdata`, membuat database `ketoko_pos_db`, lalu menerapkan skema dan seed secara otomatis. Biarkan terminal ini tetap terbuka selama API dipakai. Hentikan dengan `Ctrl+C` atau:
+   Perintah ini menginisialisasi cluster PostgreSQL 16 di `server/.pgdata`, membuat database `dur_pos_db`, lalu menerapkan skema dan seed secara otomatis. Biarkan terminal ini tetap terbuka selama API dipakai. Hentikan dengan `Ctrl+C` atau:
 
    ```bash
    npm run db:stop
@@ -143,9 +143,9 @@ npm run preview   # pratinjau hasil build
    **B. PostgreSQL lokal yang sudah terpasang**
 
    ```bash
-   createdb ketoko_pos_db
-   psql -d ketoko_pos_db -f db/migrations/001_initial_schema.sql
-   psql -d ketoko_pos_db -f db/seeds/001_initial_seed.sql
+   createdb dur_pos_db
+   psql -d dur_pos_db -f db/migrations/001_initial_schema.sql
+   psql -d dur_pos_db -f db/seeds/001_initial_seed.sql
    ```
 
    **C. Hanya PostgreSQL via Docker**
@@ -206,7 +206,7 @@ docker compose down -v       # hentikan + hapus volume (skema & seed dijalankan 
 | Variabel | Default | Keterangan |
 |---|---|---|
 | `PORT` | `4000` | Port API |
-| `DATABASE_URL` | `postgres://ketoko_user:...@localhost:5432/ketoko_pos_db` | Koneksi PostgreSQL |
+| `DATABASE_URL` | `postgres://dur_user:...@localhost:5432/dur_pos_db` | Koneksi PostgreSQL |
 | `JWT_SECRET` | — (**wajib** di produksi) | Kunci tanda tangan JWT |
 | `JWT_EXPIRES_IN` | `8h` | Masa berlaku token |
 | `CORS_ORIGIN` | `*` | Origin yang diizinkan (pisahkan koma) |

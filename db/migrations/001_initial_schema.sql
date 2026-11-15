@@ -1,5 +1,5 @@
 -- =====================================================================
--- KETOKO POS MIGRATION SCRIPT (PostgreSQL 14+)
+-- DUR POS MIGRATION SCRIPT (PostgreSQL 14+)
 -- Multi-Tenant Point of Sale Database Schema
 -- =====================================================================
 

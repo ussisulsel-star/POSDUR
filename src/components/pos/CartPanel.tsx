@@ -659,7 +659,7 @@ export const CartPanel: React.FC<CartPanelProps> = ({
           </div>
         </div>
 
-        {/* Big LED Total Display Screen (Signature Ketoko POS look) */}
+        {/* Big LED Total Display Screen */}
         <div className="bg-slate-950 rounded-xl p-3 text-white border border-slate-800 shadow-inner flex flex-col justify-between">
           <div className="flex items-center justify-between text-[11px] text-slate-400 uppercase tracking-wider font-mono">
             <span>TOTAL TAGIHAN KASIR</span>

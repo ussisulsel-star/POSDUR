@@ -6,8 +6,8 @@
 #   sudo bash scripts/setup-vps-db.sh
 #
 # Variabel lingkungan opsional:
-#   DB_NAME     nama database   (default: ketoko_pos_db)
-#   DB_USER     user aplikasi   (default: ketoko_user)
+#   DB_NAME     nama database   (default: dur_pos_db)
+#   DB_USER     user aplikasi   (default: dur_user)
 #   DB_PASSWORD password user   (default: dibuat acak & dicetak di akhir)
 #
 # Skrip ini idempoten: aman dijalankan ulang.
@@ -15,8 +15,8 @@
 # =====================================================================
 set -euo pipefail
 
-DB_NAME="${DB_NAME:-ketoko_pos_db}"
-DB_USER="${DB_USER:-ketoko_user}"
+DB_NAME="${DB_NAME:-dur_pos_db}"
+DB_USER="${DB_USER:-dur_user}"
 GENERATED_PASSWORD=""
 
 if [[ "$(id -u)" -ne 0 ]]; then

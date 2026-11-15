@@ -11,4 +11,3 @@ coverage
 .env.*
 !.env.example
 README.md
-ANALISIS_SISTEM_KETOKO_POS.md

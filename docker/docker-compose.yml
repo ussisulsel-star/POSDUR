@@ -1,12 +1,12 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: ketoko_postgres
+    container_name: dur_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ketoko_pos_db}
-      POSTGRES_USER: ${POSTGRES_USER:-ketoko_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ketoko_secure_password_99999}
+      POSTGRES_DB: ${POSTGRES_DB:-dur_pos_db}
+      POSTGRES_USER: ${POSTGRES_USER:-dur_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dur_secure_password_99999}
       TZ: Asia/Jakarta
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
@@ -16,7 +16,7 @@ services:
       - ../db/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
       - ../db/seeds/001_initial_seed.sql:/docker-entrypoint-initdb.d/002_seed.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ketoko_user} -d ${POSTGRES_DB:-ketoko_pos_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dur_user} -d ${POSTGRES_DB:-dur_pos_db}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,14 +25,14 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.backend
-    container_name: ketoko_api
+    container_name: dur_api
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 4000
       TZ: Asia/Jakarta
-      DATABASE_URL: postgres://${POSTGRES_USER:-ketoko_user}:${POSTGRES_PASSWORD:-ketoko_secure_password_99999}@postgres:5432/${POSTGRES_DB:-ketoko_pos_db}
-      JWT_SECRET: ${JWT_SECRET:-ketoko_super_secret_jwt_key_2026}
+      DATABASE_URL: postgres://${POSTGRES_USER:-dur_user}:${POSTGRES_PASSWORD:-dur_secure_password_99999}@postgres:5432/${POSTGRES_DB:-dur_pos_db}
+      JWT_SECRET: ${JWT_SECRET:-dur_super_secret_jwt_key_2026}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
     ports:
@@ -45,7 +45,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: ketoko_web_pos
+    container_name: dur_web_pos
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-3000}:80"

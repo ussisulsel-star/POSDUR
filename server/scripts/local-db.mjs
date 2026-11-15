@@ -15,9 +15,9 @@ const projectRoot = path.resolve(serverRoot, '..');
 const dataDir = path.join(serverRoot, '.pgdata');
 
 const port = Number(process.env.PGPORT || 5432);
-const user = process.env.PGUSER || 'ketoko_user';
-const password = process.env.PGPASSWORD || 'ketoko_secure_password_99999';
-const database = process.env.PGDATABASE || 'ketoko_pos_db';
+const user = process.env.PGUSER || 'dur_user';
+const password = process.env.PGPASSWORD || 'dur_secure_password_99999';
+const database = process.env.PGDATABASE || 'dur_pos_db';
 
 const postgres = new EmbeddedPostgres({
   databaseDir: dataDir,

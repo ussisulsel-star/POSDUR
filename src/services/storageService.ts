@@ -2,29 +2,29 @@ import { Product, Customer, Transaction, Shift, CashMovement, HeldTransaction, S
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_USERS, INITIAL_OUTLETS, INITIAL_CONSOLIDATED_TRANSACTIONS, INITIAL_CATEGORIES, INITIAL_EMONEY, INITIAL_ACTIVITY_LOGS } from '../data/seedData';
 
 const STORAGE_KEYS = {
-  USER: 'ketoko_pos_user',
-  TOKEN: 'ketoko_pos_jwt_token',
-  USERS: 'ketoko_pos_users',
-  OUTLETS: 'ketoko_pos_outlets',
-  OUTLET_SEED_VERSION: 'ketoko_pos_outlet_seed_version',
-  ACTIVE_OUTLET: 'ketoko_pos_active_outlet',
-  TRANSFERS: 'ketoko_pos_transfers',
-  PRODUCTS: 'ketoko_pos_products',
-  CATEGORIES: 'ketoko_pos_categories',
-  BRANDS: 'ketoko_pos_brands',
-  PRODUCT_SEED_VERSION: 'ketoko_pos_product_seed_version',
-  EMONEY: 'ketoko_pos_emoney',
-  CUSTOMERS: 'ketoko_pos_customers',
-  MEMBER_TIERS: 'ketoko_pos_member_tiers',
-  POINT_SETTINGS: 'ketoko_pos_point_settings',
-  ACTIVE_SHIFT: 'ketoko_pos_active_shift',
-  SHIFT_HISTORY: 'ketoko_pos_shift_history',
-  TRANSACTIONS: 'ketoko_pos_transactions',
-  HELD_ORDERS: 'ketoko_pos_held_orders',
-  CASH_MOVEMENTS: 'ketoko_pos_cash_movements',
-  RETURNS: 'ketoko_pos_returns',
-  SETTINGS: 'ketoko_pos_settings',
-  ACTIVITY_LOGS: 'ketoko_pos_activity_logs',
+  USER: 'dur_pos_user',
+  TOKEN: 'dur_pos_jwt_token',
+  USERS: 'dur_pos_users',
+  OUTLETS: 'dur_pos_outlets',
+  OUTLET_SEED_VERSION: 'dur_pos_outlet_seed_version',
+  ACTIVE_OUTLET: 'dur_pos_active_outlet',
+  TRANSFERS: 'dur_pos_transfers',
+  PRODUCTS: 'dur_pos_products',
+  CATEGORIES: 'dur_pos_categories',
+  BRANDS: 'dur_pos_brands',
+  PRODUCT_SEED_VERSION: 'dur_pos_product_seed_version',
+  EMONEY: 'dur_pos_emoney',
+  CUSTOMERS: 'dur_pos_customers',
+  MEMBER_TIERS: 'dur_pos_member_tiers',
+  POINT_SETTINGS: 'dur_pos_point_settings',
+  ACTIVE_SHIFT: 'dur_pos_active_shift',
+  SHIFT_HISTORY: 'dur_pos_shift_history',
+  TRANSACTIONS: 'dur_pos_transactions',
+  HELD_ORDERS: 'dur_pos_held_orders',
+  CASH_MOVEMENTS: 'dur_pos_cash_movements',
+  RETURNS: 'dur_pos_returns',
+  SETTINGS: 'dur_pos_settings',
+  ACTIVITY_LOGS: 'dur_pos_activity_logs',
 };
 
 // Naikkan versi ini setiap kali daftar outlet master berubah,
@@ -159,7 +159,7 @@ export const StorageService = {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.USER);
       const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-      if (!data || !token || token.endsWith('.ketoko_signature_99999')) {
+      if (!data || !token || token.endsWith('.dur_signature_99999')) {
         localStorage.removeItem(STORAGE_KEYS.USER);
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
         return null;
