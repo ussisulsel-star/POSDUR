@@ -74,8 +74,9 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
 cd server
-npm ci --omit=dev
-npm run build          # tsc -> dist/
+npm ci               # lengkap dulu, termasuk TypeScript untuk build
+npm run build        # tsc -> dist/
+npm prune --omit=dev # buang dependensi development sebelum produksi
 sudo npm install -g pm2
 pm2 start dist/server.js --name ketoko-api
 pm2 save
