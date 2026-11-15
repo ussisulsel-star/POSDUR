@@ -69,7 +69,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600">
           <Store className="h-4 w-4 text-white" />
         </div>
-        <span className="text-sm font-extrabold tracking-wider">CATAT POS</span>
+        <span className="text-sm font-extrabold tracking-wider">DUR POS</span>
       </div>
 
       <div className="hidden items-center gap-2 rounded-md border border-slate-700/60 bg-slate-800/80 px-2.5 py-1.5 text-xs text-slate-300 lg:flex">

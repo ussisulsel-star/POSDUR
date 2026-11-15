@@ -1,4 +1,4 @@
-# VC3 Catat POS
+# DUR POS
 
 Aplikasi **Point of Sale (POS) multi-outlet** untuk kasir ritel: terminal kasir sentuh + barcode, shift kas, multi-pembayaran, retur, laporan, serta manajemen master data & pengguna.
 

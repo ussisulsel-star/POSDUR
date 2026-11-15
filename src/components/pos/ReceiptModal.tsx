@@ -199,7 +199,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <p>Terima Kasih Atas Kunjungan Anda</p>
               <p className="text-[9px]">Barang yang sudah dibeli tidak dapat ditukar/dikembalikan kecuali ada perjanjian.</p>
               <div className="pt-2 font-mono text-[9px] tracking-widest text-slate-400">
-                * * * CATAT CLOUD POS * * *
+                * * * DUR POS * * *
               </div>
             </div>
           </div>

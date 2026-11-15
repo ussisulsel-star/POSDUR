@@ -236,7 +236,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Master_Produk');
-      XLSX.writeFile(wb, `master_produk_catat_pos_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      XLSX.writeFile(wb, `master_produk_dur_pos_${new Date().toISOString().slice(0, 10)}.xlsx`);
       playBeep('success');
     } catch (err) {
       console.error('Export error:', err);

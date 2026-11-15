@@ -49,7 +49,7 @@ export const ShortcutsHelpModal: React.FC<ShortcutsHelpModalProps> = ({
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl mb-3 flex items-start gap-2 text-xs text-blue-900">
             <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <p>
-              Catat POS dirancang agar kasir dapat bertransaksi 100% cepat hanya menggunakan keyboard dan barcode scanner tanpa perlu menyentuh mouse.
+              DUR POS dirancang agar kasir dapat bertransaksi 100% cepat hanya menggunakan keyboard dan barcode scanner tanpa perlu menyentuh mouse.
             </p>
           </div>
 

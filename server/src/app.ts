@@ -52,7 +52,7 @@ const healthHandler = asyncHandler(async (_req, res) => {
 
   res.status(databaseUp ? 200 : 503).json({
     status: databaseUp ? 'healthy' : 'degraded',
-    service: 'vc3-catat-api',
+    service: 'vc3-dur-api',
     version: '1.0.0',
     database: databaseUp ? 'up' : 'down',
     timestamp: new Date().toISOString(),

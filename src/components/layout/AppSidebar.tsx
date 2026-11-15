@@ -324,7 +324,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </div>
             <div className={`min-w-0 ${collapsed ? 'md:hidden' : ''}`}>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm font-extrabold tracking-wider">CATAT</span>
+                <span className="text-sm font-extrabold tracking-wider">DUR</span>
                 <span className="rounded bg-white/15 px-1.5 py-0.5 text-[9px] font-bold">
                   POS
                 </span>

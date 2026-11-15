@@ -70,7 +70,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* Brand Banner Header */}
           <div className="bg-slate-950 p-6 text-white text-center border-b border-slate-800 relative overflow-hidden">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 rounded-xl shadow-md mb-2">
-              <span className="font-extrabold tracking-wider text-xl uppercase">CATAT</span>
+              <span className="font-extrabold tracking-wider text-xl uppercase">DUR</span>
               <span className="bg-white/20 text-xs px-2 py-0.5 rounded font-mono font-bold">POS</span>
             </div>
             <h1 className="text-sm font-bold text-slate-200">Point of Sale & Kasir Cloud Multi Outlet</h1>
@@ -168,14 +168,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
           {/* Card Footer */}
           <div className="p-4 bg-slate-50 border-t border-slate-100 text-center text-[11px] text-slate-500">
-            <span>Catat POS Cloud Architecture · Versi Web POS 4.8</span>
+            <span>DUR POS Cloud Architecture · Versi Web POS 4.8</span>
           </div>
         </div>
       </div>
 
       {/* Page Footer */}
       <div className="max-w-5xl w-full mx-auto text-center text-xs text-slate-500">
-        <p>© 2026 CATAT POS Multi-Outlet. Hak Cipta Dilindungi.</p>
+        <p>© 2026 DUR POS Multi-Outlet. Hak Cipta Dilindungi.</p>
       </div>
     </div>
   );

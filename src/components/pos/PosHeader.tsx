@@ -111,7 +111,7 @@ export const PosHeader: React.FC<PosHeaderProps> = ({
         {/* Brand & Multi-Tenant Info */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 rounded-lg shadow-sm">
-            <span className="font-extrabold tracking-wider text-base uppercase">CATAT</span>
+            <span className="font-extrabold tracking-wider text-base uppercase">DUR</span>
             <span className="bg-white/20 text-xs px-1.5 py-0.5 rounded font-mono font-bold tracking-tight">POS</span>
           </div>
 

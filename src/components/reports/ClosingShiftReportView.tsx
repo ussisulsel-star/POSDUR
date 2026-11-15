@@ -886,7 +886,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
                   {currentShift.outletName || outlets[0]?.name || 'Cabang Kelapa Gading (Pusat & HQ)'}
                 </p>
                 <p className="text-[11px] text-slate-500 font-mono">
-                  Sistem POS Cloud Catat POS · ID Perusahaan: 99999 · Dokumen Resmi Audit Kasir
+                  Sistem POS Cloud DUR POS · ID Perusahaan: 99999 · Dokumen Resmi Audit Kasir
                 </p>
                 <div className="inline-block bg-slate-900 text-white font-bold text-xs px-3 py-1 rounded mt-2 uppercase tracking-widest font-mono">
                   BERITA ACARA SERAH TERIMA & TUTUP KASIR
@@ -1115,7 +1115,7 @@ export const ClosingShiftReportView: React.FC<ClosingShiftReportViewProps> = ({
                 </div>
 
                 <div className="text-center text-[10px] text-slate-400 pt-6 font-mono">
-                  Dicetak otomatis melalui Catat POS Cloud System · Dicetak pada: {new Date().toLocaleString('id-ID')}
+                  Dicetak otomatis melalui DUR POS Cloud System · Dicetak pada: {new Date().toLocaleString('id-ID')}
                 </div>
               </div>
             </div>

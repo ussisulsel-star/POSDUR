@@ -1,8 +1,8 @@
 {
-  "name": "vc3-catat-api",
+  "name": "vc3-dur-api",
   "version": "1.0.0",
   "private": true,
-  "description": "REST API Point of Sale VC3 Catat (Express + PostgreSQL)",
+  "description": "REST API Point of Sale DUR POS (Express + PostgreSQL)",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

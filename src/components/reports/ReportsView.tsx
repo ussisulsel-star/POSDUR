@@ -2206,7 +2206,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   KANTOR PUSAT & MANAGEMENT MULTI-OUTLET NASIONAL
                 </p>
                 <p className="text-[11px] text-slate-500 font-mono">
-                  Sistem POS Cloud Catat POS · ID Perusahaan: 99999 · Dokumen Resmi Konsolidasi Keuangan Antar Cabang
+                  Sistem POS Cloud DUR POS · ID Perusahaan: 99999 · Dokumen Resmi Konsolidasi Keuangan Antar Cabang
                 </p>
                 <div className="inline-block bg-slate-900 text-white font-bold text-xs px-3.5 py-1 rounded mt-2 uppercase tracking-widest font-mono">
                   LAPORAN MATRIKS KONSOLIDASI PENJUALAN ANTAR CABANG
@@ -2411,7 +2411,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
 
               {/* Footer Note */}
               <div className="pt-4 text-[10px] text-slate-400 text-center font-mono border-t border-slate-200">
-                Dokumen ini dicetak secara otomatis melalui Sistem Cloud Catat POS Multi-Outlet. Sah dan mengikat untuk keperluan pelaporan internal perusahaan.
+                Dokumen ini dicetak secara otomatis melalui Sistem Cloud DUR POS Multi-Outlet. Sah dan mengikat untuk keperluan pelaporan internal perusahaan.
               </div>
             </div>
           </div>

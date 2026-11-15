@@ -1,7 +1,7 @@
 import { Outlet, User as PosUser, UserPermissions } from '../types/pos';
 
 /**
- * Pusat kebijakan kewenangan (RBAC) Catat POS.
+ * Pusat kebijakan kewenangan (RBAC) DUR POS.
  *
  * Aturan utama:
  * - ADMIN      : seluruh fitur

@@ -1,8 +1,8 @@
 {
-  "name": "vc3-catat-pos",
+  "name": "vc3-dur-pos",
   "private": true,
   "version": "1.0.0",
-  "description": "VC3 Catat POS - Point of Sale multi-outlet (React + Vite) dengan REST API Express dan PostgreSQL",
+  "description": "DUR POS - Point of Sale multi-outlet (React + Vite) dengan REST API Express dan PostgreSQL",
   "type": "module",
   "engines": {
     "node": ">=20"

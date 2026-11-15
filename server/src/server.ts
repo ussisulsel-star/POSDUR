@@ -15,7 +15,7 @@ async function start(): Promise<void> {
 
   server = app.listen(config.port, () => {
     console.log(
-      `VC3 Catat API berjalan di port ${config.port} (env: ${config.env}).`
+      `DUR POS API berjalan di port ${config.port} (env: ${config.env}).`
     );
   });
 }

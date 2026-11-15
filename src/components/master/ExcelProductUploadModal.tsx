@@ -160,7 +160,7 @@ export const ExcelProductUploadModal: React.FC<ExcelProductUploadModalProps> = (
 
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Master_Produk');
-      XLSX.writeFile(wb, 'template_upload_item_barang_catat_pos.xlsx');
+      XLSX.writeFile(wb, 'template_upload_item_barang_dur_pos.xlsx');
       playBeep('success');
     } catch (err) {
       console.error('Error generating template:', err);
