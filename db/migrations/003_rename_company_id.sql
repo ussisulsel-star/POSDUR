@@ -31,7 +31,7 @@ BEGIN
     SELECT c.relname AS tbl
     FROM pg_class c
     JOIN pg_attribute a
-      ON a.attrelid = c.relid AND a.attname = 'company_id'
+      ON a.attrelid = c.oid AND a.attname = 'company_id'
     WHERE c.relkind = 'r'
       AND c.relnamespace = 'public'::regnamespace
       AND a.attnum > 0
