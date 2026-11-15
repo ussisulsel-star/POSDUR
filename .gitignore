@@ -8,3 +8,6 @@ coverage/
 !.env.example
 server/.pgdata/
 
+
+# Kredensial lokal (rahasia, jangan pernah di-commit)
+private/
