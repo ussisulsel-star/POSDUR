@@ -8,7 +8,8 @@ import {
   CalendarClock, 
   CheckCircle2, 
   Printer, 
-  AlertCircle 
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { PaymentMethodType, Customer, PaymentDetail, EMoney } from '../../types/pos';
 import { formatRupiah, playBeep } from '../../services/storageService';
@@ -19,6 +20,8 @@ interface PaymentModalProps {
   totalAmount: number;
   customer: Customer;
   emoneyList?: EMoney[];
+  /** True bila kasir punya shift aktif miliknya di cabang yang aktif. */
+  shiftActive?: boolean;
   onProcessPayment: (payments: PaymentDetail[], payAmount: number, changeAmount: number, shouldPrint: boolean) => void | Promise<void>;
 }
 
@@ -28,6 +31,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   totalAmount,
   customer,
   emoneyList = [],
+  shiftActive = true,
   onProcessPayment,
 }) => {
   const [method, setMethod] = useState<PaymentMethodType>('TUNAI');
@@ -548,13 +552,22 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
             <button
               type="submit"
-              disabled={(method === 'TUNAI' && isCashInsufficient) || isProcessing}
+              disabled={!shiftActive || (method === 'TUNAI' && isCashInsufficient) || isProcessing}
               className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>{isProcessing ? 'Menyimpan...' : 'Selesaikan Transaksi (Enter)'}</span>
             </button>
           </div>
+
+          {!shiftActive && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 -mt-1">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <p className="text-[11px] font-semibold text-amber-800">
+                Belum ada shift aktif milik Anda. Tutup modal ini dan buka shift kasir terlebih dahulu — tombol bayar terkunci.
+              </p>
+            </div>
+          )}
         </form>
       </div>
     </div>

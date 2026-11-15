@@ -19,6 +19,7 @@ import {
   requireString,
   roundMoney,
 } from '../utils/validation';
+import { requireActiveShift } from '../utils/active-shift';
 
 const router = Router();
 
@@ -554,19 +555,24 @@ router.post(
         customerPhone = customerPhone ?? (customer.phone ?? null);
       }
 
-      // 3. Tentukan shift aktif kasir (opsional bila kasir belum buka shift).
-      let shiftId: string | null = null;
+      // 3. Shift aktif WAJIB milik kasir untuk cabang yang aktif — transaksi
+      //    tanpa shift ditolak agar rekap kas selalu bisa direkonsiliasi.
+      let shiftId: string;
 
       if (requestedShiftId) {
         const shiftResult = await client.query(
           `SELECT id, outlet_id
              FROM pos_shifts
-            WHERE company_id = $1 AND id = $2 AND status = 'OPEN'`,
-          [companyId, requestedShiftId]
+            WHERE company_id = $1 AND id = $2 AND status = 'OPEN'
+              AND cashier_id = $3`,
+          [companyId, requestedShiftId, req.user!.id]
         );
 
         if (shiftResult.rows.length === 0) {
-          throw new ApiError(422, 'Shift tidak ditemukan atau sudah ditutup.');
+          throw new ApiError(
+            422,
+            'Shift tidak ditemukan, bukan milik kasir ini, atau sudah ditutup.'
+          );
         }
         if (
           outletId &&
@@ -581,24 +587,13 @@ router.post(
 
         shiftId = String(shiftResult.rows[0].id);
       } else {
-        const shiftParams: unknown[] = [companyId, req.user!.id];
-        let outletCondition = '';
-
-        if (outletId) {
-          shiftParams.push(outletId);
-          outletCondition = ` AND (outlet_id IS NULL OR outlet_id = $${shiftParams.length})`;
-        }
-
-        const shiftResult = await client.query(
-          `SELECT id
-             FROM pos_shifts
-            WHERE company_id = $1 AND cashier_id = $2 AND status = 'OPEN'${outletCondition}
-            ORDER BY start_time DESC
-            LIMIT 1`,
-          shiftParams
+        const activeShift = await requireActiveShift(
+          companyId,
+          req.user!.id,
+          outletId,
+          client
         );
-
-        shiftId = shiftResult.rows[0] ? String(shiftResult.rows[0].id) : null;
+        shiftId = String(activeShift.id);
       }
 
       // 4. Simpan header nota.
@@ -814,6 +809,15 @@ router.post(
           'Transaksi sudah diretur dan tidak dapat dibatalkan.'
         );
       }
+
+      // Void memengaruhi rekap kas — otorisator wajib punya shift aktif
+      // di cabang transaksi.
+      await requireActiveShift(
+        companyId,
+        req.user!.id,
+        transaction.outlet_id ?? null,
+        client
+      );
 
       const itemResult = await client.query(
         `SELECT product_id, qty
@@ -1057,6 +1061,15 @@ router.put(
       if (transaction.status === 'RETUR') {
         throw new ApiError(409, 'Transaksi yang sudah diretur tidak dapat dikoreksi.');
       }
+
+      // Koreksi memengaruhi rekap kas — otorisator wajib punya shift aktif
+      // di cabang transaksi.
+      await requireActiveShift(
+        companyId,
+        req.user!.id,
+        transaction.outlet_id ?? null,
+        client
+      );
 
       const oldItemResult = await client.query(
         `SELECT * FROM transaction_items WHERE transaction_id = $1`,
@@ -1532,6 +1545,15 @@ router.post(
       }
 
       const transaction = transactionResult.rows[0];
+
+      // Retur mengeluarkan uang/refund — otorisator wajib punya shift aktif
+      // di cabang transaksi yang diretur.
+      await requireActiveShift(
+        companyId,
+        req.user!.id,
+        transaction.outlet_id ?? null,
+        client
+      );
 
       const itemResult = await client.query(
         `SELECT *

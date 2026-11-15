@@ -318,8 +318,9 @@ router.post(
           `SELECT *
              FROM pos_shifts
             WHERE company_id = $1 AND id = $2 AND status = 'OPEN'
+              AND cashier_id = $3
             FOR UPDATE`,
-          [companyId, requestedShiftId]
+          [companyId, requestedShiftId, req.user!.id]
         );
       } else {
         shiftResult = await client.query(
@@ -335,8 +336,8 @@ router.post(
 
       if (shiftResult.rows.length === 0) {
         throw new ApiError(
-          404,
-          'Tidak ada shift terbuka. Buka shift terlebih dahulu.'
+          422,
+          'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu.'
         );
       }
 

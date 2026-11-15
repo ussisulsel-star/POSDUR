@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { LogOut, AlertTriangle } from 'lucide-react';
 import { 
   User as PosUser, 
@@ -281,6 +281,28 @@ export default function App() {
   const [shiftHistory, setShiftHistory] = useState<Shift[]>([]);
   const [heldOrders, setHeldOrders] = useState<HeldTransaction[]>(() => StorageService.getHeldOrders());
   const [transactions, setTransactions] = useState<Transaction[]>(() => StorageService.getTransactions());
+
+  // Shift yang valid untuk cabang aktif: harus OPEN, milik kasir ini, dan
+  // dicatat pada cabang yang sedang dipilih. Dipakai untuk mengunci semua
+  // operasi kas (bayar, retur, kas masuk/keluar) sampai shift dibuka.
+  const activeShiftForOutlet = useMemo<Shift | null>(() => {
+    if (!activeShift || activeShift.status !== 'OPEN') return null;
+    if (
+      user &&
+      activeShift.cashierId !== user.id &&
+      activeShift.cashierId !== user.userId
+    ) {
+      return null;
+    }
+    if (
+      activeOutlet.id &&
+      activeShift.outletId &&
+      activeShift.outletId !== activeOutlet.id
+    ) {
+      return null;
+    }
+    return activeShift;
+  }, [activeShift, activeOutlet, user]);
 
   // Modals visibility
   const [paymentModalOpen, setPaymentModalOpen] = useState<boolean>(false);
@@ -811,6 +833,14 @@ export default function App() {
       } else if (e.key === 'F8') {
         e.preventDefault();
         if (cart.length > 0) {
+          if (!activeShiftForOutlet) {
+            playBeep('error');
+            setShiftModalOpen(true);
+            alert(
+              'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu sebelum transaksi.'
+            );
+            return;
+          }
           setPaymentModalOpen(true);
         }
       } else if (e.key === 'F9') {
@@ -818,6 +848,14 @@ export default function App() {
         setSalesHistoryModalOpen(true);
       } else if (e.key === 'F10') {
         e.preventDefault();
+        if (!activeShiftForOutlet) {
+          playBeep('error');
+          setShiftModalOpen(true);
+          alert(
+            'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu sebelum kas masuk/keluar.'
+          );
+          return;
+        }
         setCashMovementModalOpen(true);
       } else if (e.key === 'F11') {
         e.preventDefault();
@@ -875,6 +913,7 @@ export default function App() {
     cashMovementModalOpen,
     shortcutsModalOpen,
     newCustomerModalOpen,
+    activeShiftForOutlet,
     user,
   ]);
 
@@ -1064,6 +1103,17 @@ export default function App() {
     changeAmount: number,
     shouldPrint: boolean
   ) => {
+    // Pengaman di sisi UI: checkout hanya boleh lewat shift aktif milik
+    // kasir pada cabang yang aktif (server menegakkan aturan yang sama).
+    if (!activeShiftForOutlet) {
+      playBeep('error');
+      setShiftModalOpen(true);
+      alert(
+        'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu sebelum transaksi.'
+      );
+      return;
+    }
+
     const pointNote =
       appliedRedeemPoints > 0
         ? ` · Tukar ${appliedRedeemPoints} poin (-${pointDiscountAmount})`
@@ -1094,7 +1144,7 @@ export default function App() {
       changeAmount,
       payments,
       status: payments.some((p) => p.method === 'PIUTANG') ? 'PIUTANG' : 'LUNAS',
-      shiftId: activeShift ? activeShift.id : 'no-shift',
+      shiftId: activeShiftForOutlet ? activeShiftForOutlet.id : 'no-shift',
       notes: `Lunas via ${payments.map((p) => p.method).join(', ')} [${activeOutlet.code}]${pointNote}`,
       pointsEarned: estimatedEarnedPoints,
       pointsRedeemed: appliedRedeemPoints,
@@ -1118,7 +1168,7 @@ export default function App() {
         ...(persistedCustomerId
           ? { customerId: persistedCustomerId, pointsRedeemed: appliedRedeemPoints }
           : {}),
-        ...(activeShift ? { shiftId: activeShift.id } : {}),
+        ...(activeShiftForOutlet ? { shiftId: activeShiftForOutlet.id } : {}),
         items: cart.map((item) => ({
           productId: item.product.id,
           qty: item.qty,
@@ -1727,8 +1777,28 @@ export default function App() {
         onCloseMobile={() => setSidebarMobileOpen(false)}
         onOpenHoldModal={() => setHoldOrdersModalOpen(true)}
         onOpenHistoryModal={() => setSalesHistoryModalOpen(true)}
-        onOpenReturnModal={() => setReturnModalOpen(true)}
-        onOpenCashMovementModal={() => setCashMovementModalOpen(true)}
+        onOpenReturnModal={() => {
+          if (!activeShiftForOutlet) {
+            playBeep('error');
+            setShiftModalOpen(true);
+            alert(
+              'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu sebelum retur.'
+            );
+            return;
+          }
+          setReturnModalOpen(true);
+        }}
+        onOpenCashMovementModal={() => {
+          if (!activeShiftForOutlet) {
+            playBeep('error');
+            setShiftModalOpen(true);
+            alert(
+              'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu sebelum kas masuk/keluar.'
+            );
+            return;
+          }
+          setCashMovementModalOpen(true);
+        }}
         onOpenShortcutsModal={() => setShortcutsModalOpen(true)}
       />
 
@@ -1749,7 +1819,24 @@ export default function App() {
         <main className="flex flex-1 flex-col overflow-hidden">
           {/* VIEW 1: TERMINAL KASIR (POS) */}
           {activeTab === 'pos' && canAccessTab(user, 'pos') && (
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+            <div className="flex-1 overflow-hidden flex flex-col">
+              {/* Banner peringatan: operasi kas terkunci sampai shift dibuka */}
+              {!activeShiftForOutlet && (
+                <div className="flex flex-wrap items-center gap-3 bg-amber-50 border-b border-amber-200 px-4 py-2.5">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                  <p className="text-xs font-semibold text-amber-800 flex-1 min-w-[16rem]">
+                    Belum ada shift aktif milik Anda di cabang ini — pembayaran,
+                    retur, void, koreksi, dan kas masuk/keluar terkunci.
+                  </p>
+                  <button
+                    onClick={() => setShiftModalOpen(true)}
+                    className="py-2 px-4 bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white rounded-lg text-xs font-bold shadow-sm transition-all shrink-0"
+                  >
+                    Buka Shift Sekarang
+                  </button>
+                </div>
+              )}
+              <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
               {/* Left 7 Cols: Catalog & Barcode Scanner */}
               <div className="lg:col-span-7 h-full overflow-hidden">
                 <ProductCatalog
@@ -1773,7 +1860,17 @@ export default function App() {
                   onRemoveItem={handleRemoveCartItem}
                   onClearCart={handleClearCart}
                   onHoldOrder={handleHoldOrder}
-                  onOpenPayment={() => setPaymentModalOpen(true)}
+                  onOpenPayment={() => {
+                    if (!activeShiftForOutlet) {
+                      playBeep('error');
+                      setShiftModalOpen(true);
+                      alert(
+                        'Belum ada shift aktif milik Anda. Buka shift kasir terlebih dahulu sebelum transaksi.'
+                      );
+                      return;
+                    }
+                    setPaymentModalOpen(true);
+                  }}
                   invoiceNo={invoiceNo}
                   invoiceDiscountPercent={invoiceDiscountPercent}
                   setInvoiceDiscountPercent={setInvoiceDiscountPercent}
@@ -1787,6 +1884,7 @@ export default function App() {
                   maxRedeemablePoints={maxRedeemablePoints}
                   onOpenRedeemPoints={() => setRedeemModalOpen(true)}
                 />
+              </div>
               </div>
             </div>
           )}
@@ -1862,6 +1960,7 @@ export default function App() {
         totalAmount={grandTotal}
         customer={selectedCustomer}
         emoneyList={emoneyList}
+        shiftActive={Boolean(activeShiftForOutlet)}
         onProcessPayment={handleProcessPayment}
       />
 
