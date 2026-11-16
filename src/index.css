@@ -25,7 +25,8 @@
   }
   #thermal-receipt-printable, #thermal-receipt-printable *,
   #closing-report-printable, #closing-report-printable *,
-  #consolidated-matrix-printable, #consolidated-matrix-printable * {
+  #consolidated-matrix-printable, #consolidated-matrix-printable *,
+  #report-page-printable, #report-page-printable * {
     visibility: visible;
   }
   #thermal-receipt-printable {
@@ -37,7 +38,8 @@
     padding: 6px;
   }
   #closing-report-printable,
-  #consolidated-matrix-printable {
+  #consolidated-matrix-printable,
+  #report-page-printable {
     position: absolute;
     left: 0;
     top: 0;

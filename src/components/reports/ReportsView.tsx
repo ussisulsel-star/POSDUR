@@ -92,6 +92,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
     REPORT_TABS.find((tab) => tab.id === activeReportTab) ?? REPORT_TABS[0];
   const ActiveReportIcon = activeReportTabMeta.icon;
 
+  // Tab yang memiliki dokumen cetak tersendiri (modal) — kontennya tidak
+  // dibungkus wrapper cetak generik agar tidak tercetak dobel.
+  const isStandalonePrintTab =
+    activeReportTab === 'closing' || activeReportTab === 'consolidated';
+
   const [selectedPaymentFilter, setSelectedPaymentFilter] = useState<string>('ALL');
   const [spvSearchTerm, setSpvSearchTerm] = useState<string>('');
   const [spvOutletFilter, setSpvOutletFilter] = useState<string>('ALL');
@@ -701,24 +706,31 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               </select>
             </div>
 
-            <button
-              onClick={() => {
-                if (activeReportTab === 'consolidated') {
-                  setShowConsolidatedPrintModal(true);
-                } else {
-                  window.print();
-                }
-              }}
-              className="flex items-center gap-1.5 py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-              title="Cetak Laporan"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Cetak Laporan</span>
-            </button>
+            {activeReportTab !== 'closing' && (
+              <button
+                onClick={() => {
+                  if (activeReportTab === 'consolidated') {
+                    setShowConsolidatedPrintModal(true);
+                  } else {
+                    window.print();
+                  }
+                }}
+                className="flex items-center gap-1.5 py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                title="Cetak Laporan"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Cetak Laporan</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Tab laporan dipindahkan ke submenu "Laporan" di sidebar */}
+
+        {/* Wrapper cetak generik: konten tab ini yang muncul saat
+            window.print() — CSS print hanya menampilkan elemen ber-ID
+            yang diizinkan, jadi tanpa wrapper ini hasil cetak kosong. */}
+        <div id={isStandalonePrintTab ? undefined : 'report-page-printable'}>
 
         {/* Executive KPI Strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -2151,6 +2163,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             />
           </div>
         )}
+        </div>
       </div>
 
       {/* ================================================================= */}
